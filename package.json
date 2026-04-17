@@ -1,0 +1,34 @@
+{
+  "name": "delegacia-da-mulher-app",
+  "version": "1.0.0",
+  "description": "Backend da Delegacia da Mulher com Node.js, Express e PostgreSQL",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed:stephanie": "node scripts/seed-admin-stephanie.js"
+  },
+  "keywords": [
+    "express",
+    "postgres",
+    "delegacia"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.15.0",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.20",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1",
+    "pdf-parse": "^1.1.1",
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

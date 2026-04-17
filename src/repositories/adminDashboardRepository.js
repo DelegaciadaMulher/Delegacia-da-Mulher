@@ -1,0 +1,113 @@
+const pool = require('../config/database');
+
+async function getCasesOfDay() {
+  const query = `
+    SELECT
+      id,
+      protocol_number AS "protocolNumber",
+      title,
+      status,
+      priority,
+      opened_at AS "openedAt"
+    FROM cases
+    WHERE opened_at::date = CURRENT_DATE
+    ORDER BY opened_at DESC
+  `;
+
+  const { rows } = await pool.query(query);
+  return {
+    total: rows.length,
+    items: rows
+  };
+}
+
+async function getPendingSummary() {
+  const query = `
+    SELECT
+      (SELECT COUNT(*) FROM expected_cases WHERE status = 'PENDENTE')::int AS "expectedCasesPending",
+      (SELECT COUNT(*) FROM summons WHERE status = 'pending')::int AS "summonsPending",
+      (SELECT COUNT(*) FROM notifications WHERE status IN ('pending', 'queued', 'failed'))::int AS "notificationsPending"
+  `;
+
+  const { rows } = await pool.query(query);
+  return rows[0];
+}
+
+async function getPendingExpectedCases() {
+  const query = `
+    SELECT
+      id,
+      bo_number AS "boNumber",
+      natureza,
+      victim_name AS "victimName",
+      author_name AS "authorName",
+      status,
+      created_at AS "createdAt"
+    FROM expected_cases
+    WHERE status = 'PENDENTE'
+    ORDER BY created_at DESC
+  `;
+
+  const { rows } = await pool.query(query);
+  return {
+    total: rows.length,
+    items: rows
+  };
+}
+
+async function getAgendaOfDay() {
+  const query = `
+    SELECT
+      a.id,
+      a.slot_id AS "slotId",
+      a.status,
+      a.appointment_type AS "appointmentType",
+      a.person_role AS "personRole",
+      s.starts_at AS "startsAt",
+      s.ends_at AS "endsAt",
+      p.full_name AS "personName"
+    FROM appointments a
+    INNER JOIN availability_slots s ON s.id = a.slot_id
+    INNER JOIN persons p ON p.id = a.person_id
+    WHERE s.starts_at::date = CURRENT_DATE
+    ORDER BY s.starts_at ASC
+  `;
+
+  const { rows } = await pool.query(query);
+  return {
+    total: rows.length,
+    items: rows
+  };
+}
+
+async function getRecurrenceSummary() {
+  const query = `
+    SELECT
+      s.person_id AS "personId",
+      p.full_name AS "personName",
+      p.cpf,
+      COUNT(DISTINCT s.case_id)::int AS "caseCount"
+    FROM summons s
+    INNER JOIN persons p ON p.id = s.person_id
+    WHERE s.person_type = 'AUTOR'
+      AND s.case_id IS NOT NULL
+    GROUP BY s.person_id, p.full_name, p.cpf
+    HAVING COUNT(DISTINCT s.case_id) > 1
+    ORDER BY COUNT(DISTINCT s.case_id) DESC, p.full_name ASC
+    LIMIT 20
+  `;
+
+  const { rows } = await pool.query(query);
+  return {
+    total: rows.length,
+    items: rows
+  };
+}
+
+module.exports = {
+  getCasesOfDay,
+  getPendingSummary,
+  getPendingExpectedCases,
+  getAgendaOfDay,
+  getRecurrenceSummary
+};
