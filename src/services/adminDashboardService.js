@@ -1,8 +1,13 @@
+const fs = require('fs/promises');
+const path = require('path');
+
 const dashboardRepository = require('../repositories/adminDashboardRepository');
 const dailyImportRepository = require('../repositories/dailyImportRepository');
 const env = require('../config/env');
 const localAuthRepository = require('../repositories/localAuthRepository');
 const localExpectedCaseRepository = require('../repositories/localExpectedCaseRepository');
+
+const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads', 'pdfs');
 
 function toIsoOrNull(value) {
   if (!value) {
@@ -13,13 +18,72 @@ function toIsoOrNull(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-function mapImportHistoryItem(item) {
+function sanitizeUploadOriginalName(fileName) {
+  return String(fileName || '').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+}
+
+function resolveUploadTimestamp(savedName) {
+  const match = String(savedName || '').match(/^(\d+)-/);
+  if (!match) {
+    return Number.NaN;
+  }
+
+  return Number(match[1]);
+}
+
+async function resolveSavedFileName({ sourceName, importedAt }) {
+  const safeOriginalName = sanitizeUploadOriginalName(sourceName);
+  if (!safeOriginalName) {
+    return null;
+  }
+
+  let fileNames = [];
+
+  try {
+    fileNames = await fs.readdir(UPLOADS_DIR);
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      return null;
+    }
+
+    throw error;
+  }
+
+  const matches = fileNames
+    .filter((fileName) => fileName.endsWith(`-${safeOriginalName}`))
+    .map((fileName) => {
+      const timestamp = resolveUploadTimestamp(fileName);
+      const importedAtMs = new Date(importedAt || 0).getTime();
+      const delta = Number.isNaN(timestamp) || Number.isNaN(importedAtMs)
+        ? Number.MAX_SAFE_INTEGER
+        : Math.abs(timestamp - importedAtMs);
+
+      return { fileName, timestamp, delta };
+    })
+    .sort((left, right) => {
+      if (left.delta !== right.delta) {
+        return left.delta - right.delta;
+      }
+
+      return right.timestamp - left.timestamp;
+    });
+
+  return matches[0] ? matches[0].fileName : null;
+}
+
+async function mapImportHistoryItem(item) {
+  const importedAt = toIsoOrNull(item.createdAt) || toIsoOrNull(item.updatedAt);
+  const savedName = item.savedName || await resolveSavedFileName({
+    sourceName: item.sourceName,
+    importedAt
+  });
+
   return {
     id: item.id,
-    importedAt: toIsoOrNull(item.createdAt) || toIsoOrNull(item.updatedAt),
+    importedAt,
     file: {
       originalName: item.sourceName || null,
-      savedName: null
+      savedName
     },
     uploadedBy: null,
     period: {
@@ -194,7 +258,7 @@ async function getImportHistory() {
     return {
       mocked: true,
       total: result.total,
-      items: result.items.map(mapImportHistoryItem)
+      items: await Promise.all(result.items.map(mapImportHistoryItem))
     };
   }
 
@@ -202,7 +266,7 @@ async function getImportHistory() {
     const result = await dailyImportRepository.getImportHistory();
     return {
       total: result.total,
-      items: result.items.map(mapImportHistoryItem)
+      items: await Promise.all(result.items.map(mapImportHistoryItem))
     };
   } catch (error) {
     if (!env.auth.devMode) {
@@ -213,7 +277,7 @@ async function getImportHistory() {
     return {
       mocked: true,
       total: result.total,
-      items: result.items.map(mapImportHistoryItem)
+      items: await Promise.all(result.items.map(mapImportHistoryItem))
     };
   }
 }

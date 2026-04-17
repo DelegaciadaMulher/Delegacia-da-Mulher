@@ -302,7 +302,7 @@ async function renderHistory() {
           </div>
           <div class="history-file">
             <strong>Arquivo:</strong> ${file && file.originalName ? file.originalName : 'não informado'}
-            ${fileLink ? ` | <a class="history-link" href="${fileLink}" target="_blank" rel="noopener noreferrer">ver arquivo original</a>` : ''}
+            ${fileLink ? ` <a class="history-link history-download-btn" href="${fileLink}" target="_blank" rel="noopener noreferrer" download>Baixar original</a>` : ''}
           </div>
           <div class="history-file"><strong>Usuário:</strong> ${uploadedBy && uploadedBy.fullName ? uploadedBy.fullName : 'não identificado'}${uploadedBy && uploadedBy.cpf ? ` (CPF ${uploadedBy.cpf})` : ''}</div>
           <div class="history-file"><strong>Período:</strong> ${periodLabel || '-'}</div>

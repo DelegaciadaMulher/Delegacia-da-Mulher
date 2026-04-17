@@ -363,6 +363,23 @@ h1 {
   color: var(--pink-700);
   font-weight: 700;
   text-decoration: none;
+
+.history-download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid #ebb4d3;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(123, 15, 69, 0.08);
+}
+
+.history-download-btn:hover {
+  text-decoration: none;
+  background: #fff3fa;
+}
 }
 
 .history-link:hover {

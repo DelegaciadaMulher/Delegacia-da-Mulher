@@ -55,7 +55,11 @@ async function buildLocalExpectedCasesFallback({ file, period, boEntries }) {
       sourceName: file.originalname,
       periodStart: period.start.toISOString(),
       periodEnd: period.end.toISOString(),
-      boEntries
+      boEntries: boEntries.map((entry) => ({
+        ...entry,
+        savedName: file.filename,
+        savedPath: file.path
+      }))
     });
   } catch (error) {
     return boEntries.map((entry, index) => ({
@@ -67,6 +71,8 @@ async function buildLocalExpectedCasesFallback({ file, period, boEntries }) {
       victimName: entry.victim || null,
       authorName: entry.author || null,
       local: entry.local || null,
+      savedName: file.filename,
+      savedPath: file.path,
       mocked: true
     }));
   }
