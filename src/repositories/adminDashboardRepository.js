@@ -26,11 +26,48 @@ async function getPendingSummary() {
     SELECT
       (SELECT COUNT(*) FROM expected_cases WHERE status = 'PENDENTE')::int AS "expectedCasesPending",
       (SELECT COUNT(*) FROM summons WHERE status = 'pending')::int AS "summonsPending",
-      (SELECT COUNT(*) FROM notifications WHERE status IN ('pending', 'queued', 'failed'))::int AS "notificationsPending"
+      (SELECT COUNT(*) FROM notifications WHERE status IN ('pending', 'queued', 'failed'))::int AS "notificationsPending",
+      (SELECT COUNT(*) FROM users WHERE is_active = FALSE)::int AS "pendingRegistrations"
   `;
 
   const { rows } = await pool.query(query);
   return rows[0];
+}
+
+async function getPendingRegistrationRequests() {
+  const query = `
+    SELECT
+      u.id,
+      u.full_name AS "fullName",
+      u.email,
+      u.role,
+      u.created_at AS "createdAt",
+      p.cpf,
+      p.phone
+    FROM users u
+    LEFT JOIN persons p ON p.id = u.person_id
+    WHERE u.is_active = FALSE
+    ORDER BY u.created_at DESC
+  `;
+
+  const { rows } = await pool.query(query);
+  return {
+    total: rows.length,
+    items: rows
+  };
+}
+
+async function approveUserRegistration(userId) {
+  const query = `
+    UPDATE users
+    SET is_active = TRUE,
+        updated_at = NOW()
+    WHERE id = $1
+    RETURNING id
+  `;
+
+  const { rows } = await pool.query(query, [userId]);
+  return rows[0] || null;
 }
 
 async function getPendingExpectedCases() {
@@ -107,6 +144,8 @@ async function getRecurrenceSummary() {
 module.exports = {
   getCasesOfDay,
   getPendingSummary,
+  getPendingRegistrationRequests,
+  approveUserRegistration,
   getPendingExpectedCases,
   getAgendaOfDay,
   getRecurrenceSummary

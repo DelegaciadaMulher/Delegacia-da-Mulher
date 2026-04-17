@@ -7,7 +7,9 @@ const pool = new Pool({
   database: env.db.database,
   user: env.db.user,
   password: env.db.password,
-  ssl: env.db.ssl ? { rejectUnauthorized: false } : false
+  ssl: env.db.ssl ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: env.db.connectionTimeoutMillis || 5000,
+  query_timeout: env.db.query_timeout || 5000
 });
 
 pool.on('error', (err) => {

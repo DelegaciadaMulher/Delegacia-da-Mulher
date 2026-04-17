@@ -29,6 +29,14 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'admin-login.html'));
 });
 
+app.get('/admin/cadastro', (req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'public', 'admin-register.html'));
+});
+
+app.get('/admin/cadastros', (req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'public', 'admin-registrations.html'));
+});
+
 app.get('/admin/painel', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'admin-dashboard.html'));
 });

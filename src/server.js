@@ -8,25 +8,11 @@ function isDbUnavailableError(error) {
 }
 
 async function startServer() {
-  try {
-    await pool.query('SELECT 1');
-    console.log('Conectado ao PostgreSQL com sucesso.');
+  console.warn('Modo simulação ativado. Subindo sem verificar banco.');
 
-    app.listen(env.port, () => {
-      console.log(`Servidor rodando na porta ${env.port}`);
-    });
-  } catch (error) {
-    if (env.auth.devMode && isDbUnavailableError(error)) {
-      console.warn('Banco indisponivel. Subindo em modo degradado (dev mode).');
-      app.listen(env.port, () => {
-        console.log(`Servidor rodando na porta ${env.port}`);
-      });
-      return;
-    }
-
-    console.error('Falha ao iniciar aplicação:', error.message);
-    process.exit(1);
-  }
+  app.listen(env.port, () => {
+    console.log(`Servidor rodando na porta ${env.port}`);
+  });
 }
 
 startServer();

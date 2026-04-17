@@ -20,6 +20,83 @@ function renderList(container, items, renderItem) {
   container.innerHTML = items.map(renderItem).join('');
 }
 
+function safeCount(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+}
+
+function readDashboardSummaryCache() {
+  try {
+    const raw = localStorage.getItem('adminDashboardSummary');
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeDashboardSummaryCache(summary) {
+  localStorage.setItem('adminDashboardSummary', JSON.stringify(summary));
+}
+
+function buildSummaryCards(summary) {
+  return [
+    { label: 'Casos Hoje', value: summary.casesOfDayTotal },
+    { label: 'Cadastros pendentes', value: summary.pendingRegistrations, action: 'goToRegistrationRequestsPage' },
+    { label: 'Pend. Casos', value: summary.expectedCasesPending, action: 'goToPendingPage' },
+    { label: 'Pend. Intimacoes', value: summary.summonsPending },
+    { label: 'Pend. Notificacoes', value: summary.notificationsPending }
+  ];
+}
+
+function renderSummaryCards(cardsData) {
+  const cards = document.getElementById('summaryCards');
+  cards.innerHTML = cardsData.map((card) => `
+    <div class="card ${card.action ? 'clickable-card' : ''}" ${card.action ? `data-action="${card.action}" role="link" tabindex="0" aria-label="${card.label}"` : ''}>
+      <div class="label">${card.label}</div>
+      <div class="value">${card.value}</div>
+    </div>
+  `).join('');
+
+  cards.onclick = (event) => {
+    const card = event.target.closest('.card[data-action]');
+    if (!card) {
+      return;
+    }
+
+    const action = card.dataset.action;
+    if (action === 'goToRegistrationRequestsPage') {
+      window.location.href = '/admin/cadastros';
+      return;
+    }
+
+    if (action === 'goToPendingPage') {
+      window.location.href = '/admin/pendencias';
+    }
+  };
+
+  cards.onkeydown = (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    const card = event.target.closest('.card[data-action]');
+    if (!card) {
+      return;
+    }
+
+    event.preventDefault();
+    const action = card.dataset.action;
+    if (action === 'goToRegistrationRequestsPage') {
+      window.location.href = '/admin/cadastros';
+      return;
+    }
+
+    if (action === 'goToPendingPage') {
+      window.location.href = '/admin/pendencias';
+    }
+  };
+}
+
 function toStartOfDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
 }
@@ -250,6 +327,97 @@ function renderPeriodCoverage(history) {
   }
 }
 
+async function loadRegistrationRequests() {
+  const token = localStorage.getItem('adminAccessToken');
+  const container = document.getElementById('registrationRequestsList');
+  const hint = document.getElementById('registrationRequestsHint');
+
+  if (!token) {
+    container.innerHTML = '<p class="muted">Nenhuma solicitacao encontrada.</p>';
+    hint.textContent = '';
+    return;
+  }
+
+  const response = await fetch('/api/admin/dashboard/pending-registrations', {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('adminAccessToken');
+    window.location.href = '/admin';
+    return;
+  }
+
+  if (!response.ok) {
+    container.innerHTML = '<p class="muted">Erro ao carregar solicitacoes de cadastro.</p>';
+    hint.textContent = '';
+    return;
+  }
+
+  const data = await response.json();
+  renderList(container, data.items, (item) => `
+    <div class="item registration-request-item" data-user-id="${item.id}">
+      <strong>${item.fullName}</strong>
+      <div>${item.email || 'sem email'}</div>
+      <div>${item.role ? `Perfil: ${item.role}` : 'Perfil: nao informado'}</div>
+      <div class="muted">CPF: ${item.cpf || '-'} | ${item.phone || 'sem telefone'}</div>
+      <div class="registration-request-actions">
+        <button type="button" class="approve-btn" data-user-id="${item.id}">Aprovar</button>
+      </div>
+    </div>
+  `);
+
+  if (!data.items || !data.items.length) {
+    container.innerHTML = '<p class="muted">Nenhuma solicitacao de cadastro pendente.</p>';
+  }
+
+  hint.textContent = data.items && data.items.length ? 'Clique em Aprovar para liberar o usuario.' : '';
+}
+
+async function approveRegistrationRequest(userId) {
+  const token = localStorage.getItem('adminAccessToken');
+  const response = await fetch(`/api/admin/dashboard/pending-registrations/${userId}/approve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || 'Falha ao aprovar solicitacao.');
+  }
+
+  return data;
+}
+
+function bindRegistrationRequestActions() {
+  const container = document.getElementById('registrationRequestsList');
+  container.addEventListener('click', async (event) => {
+    const button = event.target.closest('.approve-btn');
+    if (!button) {
+      return;
+    }
+
+    const userId = button.dataset.userId;
+    button.disabled = true;
+    button.textContent = 'Aprovando...';
+
+    try {
+      await approveRegistrationRequest(userId);
+      await loadDashboard();
+      await loadRegistrationRequests();
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = 'Aprovar';
+      alert(error.message || 'Erro ao aprovar solicitacao.');
+    }
+  });
+}
+
 function readImportHistory() {
   try {
     const raw = localStorage.getItem('boImportHistory');
@@ -458,38 +626,29 @@ async function loadDashboard() {
     data.pending.expectedCasesPending = readDevPendingCases();
   }
 
-  const cards = document.getElementById('summaryCards');
-  cards.innerHTML = [
-    { label: 'Casos Hoje', value: data.casesOfDay.total },
-    { label: 'Pend. Casos', value: data.pending.expectedCasesPending },
-    { label: 'Pend. Intimacoes', value: data.pending.summonsPending },
-    { label: 'Pend. Notificacoes', value: data.pending.notificationsPending }
-  ].map((card) => `
-    <div class="card">
-      <div class="label">${card.label}</div>
-      <div class="value">${card.value}</div>
-    </div>
-  `).join('');
+  data.casesOfDay = data.casesOfDay || { total: 0, items: [] };
+  data.agendaOfDay = data.agendaOfDay || { total: 0, items: [] };
+  data.recurrence = data.recurrence || { total: 0, items: [] };
 
-  const pendingCard = cards.children[1];
-  if (pendingCard) {
-    pendingCard.classList.add('clickable-card');
-    pendingCard.setAttribute('role', 'link');
-    pendingCard.setAttribute('tabindex', '0');
-    pendingCard.setAttribute('aria-label', 'Abrir lista de BOs pendentes');
-
-    const goToPendingPage = () => {
-      window.location.href = '/admin/pendencias';
-    };
-
-    pendingCard.addEventListener('click', goToPendingPage);
-    pendingCard.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        goToPendingPage();
-      }
-    });
+  if (!data.pending) {
+    data.pending = {};
   }
+
+  data.pending.pendingRegistrations = safeCount(data.pending.pendingRegistrations);
+  data.pending.expectedCasesPending = safeCount(data.pending.expectedCasesPending);
+  data.pending.summonsPending = safeCount(data.pending.summonsPending);
+  data.pending.notificationsPending = safeCount(data.pending.notificationsPending);
+
+  const summarySnapshot = {
+    casesOfDayTotal: safeCount(data.casesOfDay.total),
+    pendingRegistrations: data.pending.pendingRegistrations,
+    expectedCasesPending: data.pending.expectedCasesPending,
+    summonsPending: data.pending.summonsPending,
+    notificationsPending: data.pending.notificationsPending
+  };
+
+  writeDashboardSummaryCache(summarySnapshot);
+  renderSummaryCards(buildSummaryCards(summarySnapshot));
 
   renderList(document.getElementById('casesList'), data.casesOfDay.items, (item) => `
     <div class="item">
@@ -525,7 +684,7 @@ async function loadDashboard() {
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => {
-  loadDashboard().catch((error) => {
+  Promise.all([loadDashboard(), loadRegistrationRequests()]).catch((error) => {
     alert(error.message);
   });
 });
@@ -539,6 +698,18 @@ document.getElementById('boUploadForm').addEventListener('submit', (event) => {
 });
 
 setupBoUploaderInteractions();
+bindRegistrationRequestActions();
+
+const cachedDashboardSummary = readDashboardSummaryCache();
+if (cachedDashboardSummary) {
+  renderSummaryCards(buildSummaryCards({
+    casesOfDayTotal: safeCount(cachedDashboardSummary.casesOfDayTotal),
+    pendingRegistrations: safeCount(cachedDashboardSummary.pendingRegistrations),
+    expectedCasesPending: safeCount(cachedDashboardSummary.expectedCasesPending),
+    summonsPending: safeCount(cachedDashboardSummary.summonsPending),
+    notificationsPending: safeCount(cachedDashboardSummary.notificationsPending)
+  }));
+}
 
 try {
   renderPeriodCoverage(readImportHistory());
@@ -548,4 +719,11 @@ try {
 
 loadDashboard().catch((error) => {
   alert(error.message);
+});
+
+loadRegistrationRequests().catch((error) => {
+  const container = document.getElementById('registrationRequestsList');
+  if (container) {
+    container.innerHTML = '<p class="muted">Erro ao carregar solicitacoes de cadastro.</p>';
+  }
 });

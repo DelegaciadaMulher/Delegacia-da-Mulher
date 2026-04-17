@@ -41,7 +41,7 @@ p { margin: 0 0 14px; }
 
 .form {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin-top: 12px;
 }
 
@@ -50,7 +50,8 @@ label {
   color: #5b3b5a;
 }
 
-input {
+input,
+select {
   border: 1px solid #f5b8da;
   border-radius: 10px;
   padding: 11px 12px;
@@ -73,7 +74,7 @@ button {
   margin-top: 18px;
 }
 
-.auth-actions .secondary-btn {
+.secondary-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -87,16 +88,21 @@ button {
   font-weight: 700;
 }
 
-.auth-actions .secondary-btn:hover {
+.secondary-btn:hover {
   background: #ffe7f3;
-}
-
-.hidden {
-  display: none;
 }
 
 .status {
   margin-top: 12px;
   font-size: 0.94rem;
+  min-height: 1.2rem;
   color: #7a2d5b;
+}
+
+.status.success {
+  color: #1b6b30;
+}
+
+.status.error {
+  color: #9e1f4d;
 }

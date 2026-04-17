@@ -30,12 +30,20 @@ function readDevPendingCases() {
   }
 }
 
-function renderPendingItems(items) {
-  const body = document.getElementById('pendingTableBody');
+function renderPendingItems(items, total) {
   const container = document.getElementById('pendingList');
 
   if (!items.length) {
-    body.innerHTML = '';
+    if (total > 0) {
+      container.innerHTML = `
+        <div class="item empty-state-card">
+          <strong>Detalhes indisponiveis no momento</strong>
+          <div class="meta">Existem ${total} BO(s) pendente(s), mas os dados detalhados ainda nao foram carregados.</div>
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = '<p class="muted">Nenhum BO pendente no momento.</p>';
     return;
   }
@@ -45,7 +53,7 @@ function renderPendingItems(items) {
     return text || '-';
   };
 
-  body.innerHTML = items
+  container.innerHTML = items
     .map((item) => {
       const boNumber = valueOrDash(item && item.boNumber);
       const flagrante = valueOrDash(item && item.flagrante);
@@ -53,21 +61,36 @@ function renderPendingItems(items) {
       const victim = valueOrDash(item && (item.victim || item.victimName));
       const author = valueOrDash(item && (item.author || item.authorName));
       const local = valueOrDash(item && item.local);
+      const flagranteLabel = flagrante === '-' ? 'Sem flagrante informado' : `Flagrante ${flagrante}`;
 
       return `
-        <tr>
-          <td><strong>${boNumber}</strong></td>
-          <td>${flagrante}</td>
-          <td>${natureza}</td>
-          <td>${victim}</td>
-          <td>${author}</td>
-          <td>${local}</td>
-        </tr>
+        <article class="item bo-card">
+          <div class="item-main">
+            <div>
+              <div class="eyebrow">BO</div>
+              <strong>${boNumber}</strong>
+            </div>
+            <span class="flag-chip">${flagranteLabel}</span>
+          </div>
+          <div class="natureza">${natureza}</div>
+          <div class="detail-grid">
+            <div class="detail-block">
+              <span class="detail-label">Vitima</span>
+              <span>${victim}</span>
+            </div>
+            <div class="detail-block">
+              <span class="detail-label">Indiciado</span>
+              <span>${author}</span>
+            </div>
+            <div class="detail-block detail-block-wide">
+              <span class="detail-label">Local</span>
+              <span>${local}</span>
+            </div>
+          </div>
+        </article>
       `;
     })
     .join('');
-
-  container.innerHTML = '';
 }
 
 async function loadPendingCases() {
@@ -104,7 +127,7 @@ async function loadPendingCases() {
   }
 
   document.getElementById('pendingCount').textContent = String(total);
-  renderPendingItems(items);
+  renderPendingItems(items, total);
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => {

@@ -20,10 +20,40 @@
         <h1>Painel Administrativo</h1>
         <p class="subtitle">Acompanhamento em tempo real de casos, pendencias, agenda e reincidencia.</p>
       </div>
-      <button id="refreshBtn" class="refresh-btn">Atualizar</button>
+      <div class="hero-actions">
+        <button id="refreshBtn" class="icon-btn icon-btn-primary" type="button" aria-label="Atualizar painel" title="Atualizar painel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M20 4v6h-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        </button>
+        <button id="logoutBtn" class="icon-btn icon-btn-danger" type="button" aria-label="Sair" title="Sair">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M10 17l5-5-5-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12H3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        </button>
+      </div>
     </header>
 
-    <section class="cards" id="summaryCards"></section>
+    <section class="summary-strip">
+      <div class="cards" id="summaryCards" aria-live="polite">
+        <div class="card card-loading">
+          <div class="label">Casos Hoje</div>
+          <div class="value">...</div>
+        </div>
+        <div class="card card-loading clickable-card" role="link" tabindex="0" aria-label="Cadastros pendentes">
+          <div class="label">Cadastros pendentes</div>
+          <div class="value">...</div>
+        </div>
+        <div class="card card-loading clickable-card" role="link" tabindex="0" aria-label="Pend. Casos">
+          <div class="label">Pend. Casos</div>
+          <div class="value">...</div>
+        </div>
+        <div class="card card-loading">
+          <div class="label">Pend. Intimacoes</div>
+          <div class="value">...</div>
+        </div>
+        <div class="card card-loading">
+          <div class="label">Pend. Notificacoes</div>
+          <div class="value">...</div>
+        </div>
+      </div>
+    </section>
 
     <section class="panel upload-panel">
       <h2>Importar Livro de BOs do dia</h2>
@@ -62,6 +92,12 @@
       </article>
 
       <article class="panel">
+        <h2>Solicitações de cadastro</h2>
+        <div id="registrationRequestsList" class="list"></div>
+        <p id="registrationRequestsHint" class="muted"></p>
+      </article>
+
+      <article class="panel">
         <h2>Agenda</h2>
         <div id="agendaList" class="list"></div>
       </article>
@@ -74,5 +110,6 @@
   </main>
 
   <script src="/scripts/admin-dashboard.js"></script>
+  <script src="/scripts/admin-shell.js"></script>
 </body>
 </html>

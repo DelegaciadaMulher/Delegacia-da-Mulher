@@ -21,8 +21,15 @@
         <p class="subtitle">Lista de boletins aguardando vinculo de arquivos BO + Extrato.</p>
       </div>
       <div class="hero-actions">
-        <a href="/admin/painel" class="ghost-btn">Voltar ao painel</a>
-        <button id="refreshBtn" class="refresh-btn">Atualizar</button>
+        <a href="/admin/painel" class="icon-btn icon-btn-secondary" aria-label="Voltar ao painel" title="Voltar ao painel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M12 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        </a>
+        <button id="refreshBtn" class="icon-btn icon-btn-primary" type="button" aria-label="Atualizar BOs pendentes" title="Atualizar BOs pendentes">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M20 4v6h-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        </button>
+        <button id="logoutBtn" class="icon-btn icon-btn-danger" type="button" aria-label="Sair" title="Sair">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M10 17l5-5-5-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12H3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        </button>
       </div>
     </header>
 
@@ -33,25 +40,11 @@
           <span id="pendingCount">0</span>
         </div>
       </div>
-      <div class="table-wrap">
-        <table class="pending-table">
-          <thead>
-            <tr>
-              <th>BO</th>
-              <th>Flagrante</th>
-              <th>Natureza</th>
-              <th>Vitima</th>
-              <th>Indiciado</th>
-              <th>Local</th>
-            </tr>
-          </thead>
-          <tbody id="pendingTableBody"></tbody>
-        </table>
-      </div>
-      <div id="pendingList" class="list"></div>
+      <div id="pendingList" class="list pending-cards"></div>
     </section>
   </main>
 
   <script src="/scripts/admin-pending.js"></script>
+  <script src="/scripts/admin-shell.js"></script>
 </body>
 </html>

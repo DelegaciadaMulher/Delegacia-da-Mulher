@@ -36,9 +36,19 @@ async function verifyAdminOtp(req, res, next) {
   }
 }
 
+async function register(req, res, next) {
+  try {
+    const result = await authService.register(req.body);
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   requestOtp,
   verifyOtp,
   requestAdminOtp,
-  verifyAdminOtp
+  verifyAdminOtp,
+  register
 };

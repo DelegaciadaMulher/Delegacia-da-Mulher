@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 
 const env = require('../config/env');
 const authRepository = require('../repositories/authRepository');
+const localAuthRepository = require('../repositories/localAuthRepository');
+const personRepository = require('../repositories/personRepository');
 const smsClient = require('../clients/smsClient');
 const whatsappClient = require('../clients/whatsappClient');
 
@@ -30,6 +32,17 @@ function ensureSessionSecret() {
     error.statusCode = 500;
     throw error;
   }
+}
+
+function isDbUnavailableError(error) {
+  const code = String(error && error.code ? error.code : '').toUpperCase();
+  const message = String(error && error.message ? error.message : '').toLowerCase();
+  return code === 'ECONNREFUSED'
+    || code === 'ENOTFOUND'
+    || code === 'ETIMEDOUT'
+    || message.includes('connection timeout')
+    || message.includes('query read timeout')
+    || message.includes('timeout expired');
 }
 
 function buildOtpDeliveryMessage(code) {
@@ -265,6 +278,94 @@ async function verifyOtp(payload) {
   };
 }
 
+async function register(payload) {
+  const cpf = normalizeCpf(payload.cpf);
+  const fullName = String(payload.fullName || '').trim();
+  const email = String(payload.email || '').trim();
+  const phone = String(payload.phone || '').trim();
+  const role = String(payload.role || 'agent').trim().toLowerCase();
+
+  if (!fullName) {
+    const error = new Error('Nome completo e obrigatorio.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!cpf || cpf.length !== 11) {
+    const error = new Error('CPF invalido. Informe 11 digitos.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!phone) {
+    const error = new Error('Telefone e obrigatorio para contato.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const error = new Error('Email invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!['agent', 'admin', 'manager'].includes(role)) {
+    const error = new Error('Perfil invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  try {
+    const existingUser = await authRepository.findUserByCpf(cpf);
+    if (existingUser) {
+      const error = new Error('Ja existe um usuario cadastrado com este CPF.');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const person = await personRepository.upsertPersonByCpf({
+      fullName,
+      cpf,
+      phone,
+      email
+    });
+
+    const passwordHash = hashText(crypto.randomUUID());
+
+    const user = await authRepository.createUser({
+      personId: person.id,
+      fullName,
+      email,
+      passwordHash,
+      role,
+      isActive: false
+    });
+
+    return {
+      userId: user.id,
+      message: 'Solicitacao de cadastro enviada. Aguarde aprovacao do administrador.'
+    };
+  } catch (error) {
+    if (!env.auth.devMode || !isDbUnavailableError(error)) {
+      throw error;
+    }
+
+    const user = await localAuthRepository.createPendingRegistration({
+      fullName,
+      cpf,
+      email,
+      phone,
+      role
+    });
+
+    return {
+      userId: user.id,
+      message: 'Solicitacao de cadastro enviada no banco local de simulacao. Aguarde aprovacao do administrador.',
+      persistenceMode: 'local_dev_store'
+    };
+  }
+}
+
 async function verifyAdminOtp(payload) {
   const cpf = normalizeCpf(payload.cpf);
   const channel = normalizeChannel(payload.channel);
@@ -366,5 +467,6 @@ module.exports = {
   requestOtp,
   verifyOtp,
   requestAdminOtp,
-  verifyAdminOtp
+  verifyAdminOtp,
+  register
 };

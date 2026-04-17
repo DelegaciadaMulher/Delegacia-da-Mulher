@@ -22,6 +22,38 @@ async function findActiveUserByCpf(cpf) {
   return rows[0] || null;
 }
 
+async function findUserByCpf(cpf) {
+  const query = `
+    SELECT
+      u.id,
+      u.person_id AS "personId",
+      u.full_name AS "fullName",
+      u.email,
+      u.role,
+      u.is_active AS "isActive",
+      p.cpf,
+      p.phone
+    FROM users u
+    INNER JOIN persons p ON p.id = u.person_id
+    WHERE p.cpf = $1
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query, [cpf]);
+  return rows[0] || null;
+}
+
+async function createUser({ personId, fullName, email, passwordHash, role, isActive }) {
+  const query = `
+    INSERT INTO users (person_id, full_name, email, password_hash, role, is_active)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING id, person_id AS "personId", full_name AS "fullName", email, role, is_active AS "isActive"
+  `;
+
+  const { rows } = await pool.query(query, [personId, fullName, email, passwordHash, role, isActive]);
+  return rows[0];
+}
+
 async function createAuthCode({ userId, codeHash, codeType, expiresAt }) {
   const query = `
     INSERT INTO auth_codes (user_id, code, code_type, expires_at)
@@ -110,5 +142,7 @@ module.exports = {
   findLatestValidAuthCode,
   markAuthCodeUsed,
   createUserSession,
-  findActiveSessionByJti
+  findActiveSessionByJti,
+  findUserByCpf,
+  createUser
 };
