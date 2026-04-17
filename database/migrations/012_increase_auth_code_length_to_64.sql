@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE auth_codes
+  ALTER COLUMN code TYPE VARCHAR(64);
+
+COMMIT;

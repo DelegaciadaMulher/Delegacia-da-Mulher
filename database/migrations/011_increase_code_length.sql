@@ -1,0 +1,9 @@
+BEGIN;
+
+ALTER TABLE auth_codes
+  ALTER COLUMN code TYPE VARCHAR(32);
+
+ALTER TABLE appointments
+  ALTER COLUMN attendance_code TYPE VARCHAR(32);
+
+COMMIT;
