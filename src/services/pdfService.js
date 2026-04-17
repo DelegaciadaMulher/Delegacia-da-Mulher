@@ -12,6 +12,18 @@ function isDbUnavailableError(error) {
   return code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT';
 }
 
+async function cleanupFailedImport(createdImport) {
+  if (!createdImport || !createdImport.id || Number(createdImport.id) <= 0) {
+    return;
+  }
+
+  try {
+    await dailyImportRepository.deleteImportById(createdImport.id);
+  } catch (cleanupError) {
+    // Ignore cleanup failure so the original import error can surface.
+  }
+}
+
 async function extractTextFromPdfFile(filePath) {
   const fileBuffer = await fs.readFile(filePath);
   const data = await pdfParse(fileBuffer);
@@ -151,6 +163,11 @@ async function processPdfUpload(file) {
       )
     );
   } catch (error) {
+    if (createdImport) {
+      await cleanupFailedImport(createdImport);
+      createdImport = null;
+    }
+
     if (env.auth.devMode && isDbUnavailableError(error)) {
       persistenceMode = 'mocked_without_database';
       lastImport = null;

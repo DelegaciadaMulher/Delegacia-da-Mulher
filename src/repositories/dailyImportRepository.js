@@ -11,6 +11,11 @@ async function getLastImportedPeriod() {
     FROM daily_imports
     WHERE period_start IS NOT NULL
       AND period_end IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM expected_cases ec
+        WHERE ec.daily_import_id = daily_imports.id
+      )
     ORDER BY period_end DESC
     LIMIT 1
   `;
@@ -68,6 +73,11 @@ async function getImportHistory(limit = 30) {
     FROM daily_imports
     WHERE period_start IS NOT NULL
       AND period_end IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM expected_cases ec
+        WHERE ec.daily_import_id = daily_imports.id
+      )
     ORDER BY COALESCE(created_at, period_end) DESC, id DESC
     LIMIT $1
   `;
@@ -79,8 +89,18 @@ async function getImportHistory(limit = 30) {
   };
 }
 
+async function deleteImportById(importId) {
+  const query = `
+    DELETE FROM daily_imports
+    WHERE id = $1
+  `;
+
+  await pool.query(query, [importId]);
+}
+
 module.exports = {
   getLastImportedPeriod,
   createImportWithPeriod,
-  getImportHistory
+  getImportHistory,
+  deleteImportById
 };
