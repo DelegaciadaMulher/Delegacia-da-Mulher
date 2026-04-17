@@ -50,7 +50,8 @@ function buildSummaryCards(summary) {
     { label: 'BOs Pendentes', value: summary.expectedCasesPending, action: 'goToPendingPage' },
     { label: 'Agenda', value: summary.agendaTotal, action: 'goToAgendaPage' },
     { label: 'Intimações Pendentes', value: summary.summonsPending },
-    { label: 'Natureza', value: summary.notificationsPending, action: 'goToNaturePage' }
+    { label: 'Mensagens', value: summary.notificationsPending, action: 'goToMessagesPage' },
+    { label: 'Natureza', value: 'Abrir', action: 'goToNaturePage' }
   ];
 }
 
@@ -77,6 +78,11 @@ function runSummaryCardAction(action) {
 
   if (action === 'goToAgendaPage') {
     window.location.href = '/admin/agenda';
+    return;
+  }
+
+  if (action === 'goToMessagesPage') {
+    window.location.href = '/admin/mensagens';
     return;
   }
 

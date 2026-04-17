@@ -13,20 +13,125 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '');
 }
 
+function isWhatsappConfigError(error) {
+  const message = String(error && error.message ? error.message : '');
+  return message.includes('WHATSAPP_API_URL nao configurado')
+    || message.includes('WHATSAPP_PHONE_NUMBER_ID nao configurado');
+}
+
+function isWhatsappUnavailableError(error) {
+  const code = String(error && error.code ? error.code : '').toUpperCase();
+  const message = String(error && error.message ? error.message : '').toLowerCase();
+
+  return code === 'ENOTFOUND'
+    || code === 'ECONNREFUSED'
+    || code === 'ETIMEDOUT'
+    || code === 'EAI_AGAIN'
+    || message.includes('getaddrinfo enotfound')
+    || message.includes('timeout')
+    || message.includes('connect econnrefused');
+}
+
+function resolvePublicBaseUrl(publicBaseUrl) {
+  const rawValue = String(publicBaseUrl || env.whatsapp.publicBaseUrl || '').trim();
+
+  if (!rawValue) {
+    const error = new Error('Base publica do site nao informada para gerar o link de atendimento.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(rawValue);
+  } catch (parseError) {
+    const error = new Error('Base publica do site invalida para gerar o link de atendimento.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    const error = new Error('Base publica do site deve usar http ou https.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return parsedUrl.origin;
+}
+
 function resolveTemplateName(personType) {
   const mapped = TEMPLATE_BY_PERSON_TYPE[personType];
   return mapped || env.whatsapp.defaultTemplateName;
 }
 
 function buildSummonsLink(token) {
-  if (!env.whatsapp.publicBaseUrl) {
-    const error = new Error('WHATSAPP_PUBLIC_BASE_URL nao configurado.');
-    error.statusCode = 500;
+  const baseUrl = resolvePublicBaseUrl(env.whatsapp.publicBaseUrl).replace(/\/$/, '');
+  return `${baseUrl}/intimacao?token=${encodeURIComponent(token)}`;
+}
+
+function buildIndictmentLink({ publicBaseUrl, boNumber }) {
+  const linkUrl = new URL('/atendimento', `${resolvePublicBaseUrl(publicBaseUrl)}/`);
+
+  if (boNumber) {
+    linkUrl.searchParams.set('bo', String(boNumber).trim());
+  }
+
+  return linkUrl.toString();
+}
+
+function buildIndictmentMessage({ messageTemplate, link, authorName, boNumber }) {
+  const template = String(messageTemplate || '').trim();
+
+  if (!template) {
+    const error = new Error('Salve primeiro a mensagem na aba Mensagens antes de indiciar.');
+    error.statusCode = 400;
     throw error;
   }
 
-  const baseUrl = env.whatsapp.publicBaseUrl.replace(/\/$/, '');
-  return `${baseUrl}/intimacao?token=${encodeURIComponent(token)}`;
+  const replacements = {
+    nome: String(authorName || '').trim(),
+    indiciado: String(authorName || '').trim(),
+    bo: String(boNumber || '').trim(),
+    link
+  };
+
+  const renderedMessage = template.replace(/\{\{\s*(nome|indiciado|bo|link)\s*\}\}/gi, (match, key) => {
+    const replacement = replacements[String(key || '').toLowerCase()];
+    return replacement == null ? '' : replacement;
+  }).trim();
+
+  if (!renderedMessage) {
+    const error = new Error('A mensagem configurada na aba Mensagens esta vazia.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return renderedMessage.includes(link)
+    ? renderedMessage
+    : `${renderedMessage}\n\nAcesse: ${link}`;
+}
+
+async function dispatchWhatsappTextMessage({ phone, message, context }) {
+  try {
+    return await whatsappClient.sendTemplateMessage({
+      to: phone,
+      phone,
+      channel: 'whatsapp',
+      message
+    });
+  } catch (error) {
+    if (env.auth.devMode && (isWhatsappConfigError(error) || isWhatsappUnavailableError(error))) {
+      return {
+        mocked: true,
+        channel: 'whatsapp',
+        context,
+        to: phone,
+        message
+      };
+    }
+
+    throw error;
+  }
 }
 
 function validateSendInput(payload) {
@@ -103,6 +208,43 @@ async function sendSummonsMessage(payload) {
   };
 }
 
+async function sendIndictmentMessage(payload) {
+  const phone = normalizePhone(payload && payload.phone);
+
+  if (!phone) {
+    const error = new Error('Informe o WhatsApp do indiciado antes de indiciar.');
+    error.statusCode = 422;
+    throw error;
+  }
+
+  const link = buildIndictmentLink({
+    publicBaseUrl: payload && payload.publicBaseUrl,
+    boNumber: payload && payload.boNumber
+  });
+
+  const message = buildIndictmentMessage({
+    messageTemplate: payload && payload.messageTemplate,
+    link,
+    authorName: payload && payload.authorName,
+    boNumber: payload && payload.boNumber
+  });
+
+  const providerResponse = await dispatchWhatsappTextMessage({
+    phone,
+    message,
+    context: 'indiciamento'
+  });
+
+  return {
+    phone,
+    link,
+    message,
+    providerResponse,
+    mocked: Boolean(providerResponse && providerResponse.mocked)
+  };
+}
+
 module.exports = {
-  sendSummonsMessage
+  sendSummonsMessage,
+  sendIndictmentMessage
 };

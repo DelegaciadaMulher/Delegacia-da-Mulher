@@ -6,6 +6,7 @@ const dailyImportRepository = require('../repositories/dailyImportRepository');
 const env = require('../config/env');
 const localAuthRepository = require('../repositories/localAuthRepository');
 const localExpectedCaseRepository = require('../repositories/localExpectedCaseRepository');
+const whatsappService = require('./whatsappService');
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads', 'pdfs');
 const SUPER_ADMIN_FULL_NAME = 'Stephanie de Paula Santos Amorim';
@@ -324,6 +325,40 @@ function buildAgendaCalendarResponse({ month, items, mocked = false }) {
   };
 }
 
+function buildNotificationsResponse({ items, mocked = false }) {
+  const normalizedItems = Array.isArray(items)
+    ? items
+        .map((item) => {
+          const caseProtocolNumber = normalizePersonName(item.caseProtocolNumber);
+
+          return {
+            id: item.id,
+            targetName: normalizePersonName(item.targetName) || null,
+            targetCpf: normalizeDigits(item.targetCpf) || null,
+            targetPhone: normalizeDigits(item.targetPhone) || null,
+            caseId: item.caseId || null,
+            caseProtocolNumber: caseProtocolNumber ? caseProtocolNumber.toUpperCase() : null,
+            message: String(item.message || '').trim(),
+            channel: normalizeLower(item.channel) || null,
+            status: normalizeLower(item.status) || null,
+            scheduledFor: toIsoOrNull(item.scheduledFor),
+            sentAt: toIsoOrNull(item.sentAt),
+            createdAt: toIsoOrNull(item.createdAt)
+          };
+        })
+        .filter((item) => item.id != null)
+    : [];
+
+  const pendingTotal = normalizedItems.filter((item) => ['pending', 'queued', 'failed'].includes(item.status)).length;
+
+  return {
+    ...(mocked ? { mocked: true } : {}),
+    total: normalizedItems.length,
+    pendingTotal,
+    items: normalizedItems
+  };
+}
+
 function buildDevAgendaCalendar(monthValue) {
   const parsedMonth = parseAgendaMonth(monthValue);
   const now = new Date();
@@ -345,6 +380,28 @@ function buildDevAgendaCalendar(monthValue) {
           personName: SUPER_ADMIN_FULL_NAME
         }]
       : []
+  });
+}
+
+function buildDevNotificationsList() {
+  const now = new Date().toISOString();
+
+  return buildNotificationsResponse({
+    mocked: true,
+    items: [{
+      id: 1,
+      targetName: 'Vitima Exemplo',
+      targetCpf: '00000000000',
+      targetPhone: '11999999999',
+      caseId: 1,
+      caseProtocolNumber: 'DEV-001',
+      message: 'Atualizacao do caso: o autor Exemplo foi intimado.',
+      channel: 'whatsapp',
+      status: 'queued',
+      scheduledFor: now,
+      sentAt: null,
+      createdAt: now
+    }]
   });
 }
 
@@ -560,6 +617,66 @@ async function getPendingCasesList() {
   }
 }
 
+async function findPendingCaseForIndictment(expectedCaseId) {
+  if (shouldUseLocalSimulation()) {
+    return localExpectedCaseRepository.findPendingExpectedCaseById(expectedCaseId);
+  }
+
+  try {
+    return await dashboardRepository.findPendingExpectedCaseById(expectedCaseId);
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    return localExpectedCaseRepository.findPendingExpectedCaseById(expectedCaseId);
+  }
+}
+
+async function markPendingCaseForIndictment(expectedCaseId) {
+  if (shouldUseLocalSimulation()) {
+    return localExpectedCaseRepository.markPendingCaseAsProcessing(expectedCaseId);
+  }
+
+  try {
+    return await dashboardRepository.markPendingCaseAsProcessing(expectedCaseId);
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    return localExpectedCaseRepository.markPendingCaseAsProcessing(expectedCaseId);
+  }
+}
+
+async function indictPendingCase(expectedCaseId, payload) {
+  const expectedCase = await findPendingCaseForIndictment(expectedCaseId);
+
+  if (!expectedCase) {
+    return null;
+  }
+
+  const delivery = await whatsappService.sendIndictmentMessage({
+    phone: payload && payload.authorWhatsapp,
+    messageTemplate: payload && payload.messageTemplate,
+    publicBaseUrl: payload && payload.publicBaseUrl,
+    authorName: expectedCase.authorName,
+    boNumber: expectedCase.boNumber
+  });
+
+  const updatedCase = await markPendingCaseForIndictment(expectedCaseId);
+  if (!updatedCase) {
+    const error = new Error('BO pendente nao encontrado ou ja processado.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return {
+    ...updatedCase,
+    delivery
+  };
+}
+
 async function getInvolvedPeopleList() {
   if (shouldUseLocalSimulation()) {
     const result = await localExpectedCaseRepository.listInvolvedPeopleSource();
@@ -693,6 +810,23 @@ async function deleteUser(userId) {
   }
 }
 
+async function getNotificationsList() {
+  if (shouldUseLocalSimulation()) {
+    return buildDevNotificationsList();
+  }
+
+  try {
+    const result = await dashboardRepository.getNotifications();
+    return buildNotificationsResponse(result);
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    return buildDevNotificationsList();
+  }
+}
+
 async function getImportHistory() {
   if (shouldUseLocalSimulation()) {
     const result = await localExpectedCaseRepository.listImportHistory();
@@ -726,11 +860,13 @@ async function getImportHistory() {
 module.exports = {
   getDashboardOverview,
   getPendingCasesList,
+  indictPendingCase,
   getAgendaCalendar,
   getInvolvedPeopleList,
   getPendingRegistrationRequests,
   approveRegistrationRequest,
   getUsersList,
+  getNotificationsList,
   getImportHistory,
   deleteUser
 };

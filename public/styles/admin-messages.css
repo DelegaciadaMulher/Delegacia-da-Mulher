@@ -1,0 +1,83 @@
+.compose-panel {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.compose-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.compose-header h2 {
+  margin: 0 0 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.2rem, 2.2vw, 1.55rem);
+  color: var(--pink-900);
+}
+
+.draft-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.draft-field {
+  display: grid;
+  gap: 8px;
+}
+
+.draft-label {
+  color: var(--soft-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.draft-field textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff8fc 0%, #ffffff 100%);
+  color: var(--ink);
+  padding: 14px 16px;
+  font: inherit;
+  line-height: 1.55;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.draft-field textarea::placeholder {
+  color: #876b8c;
+}
+
+.draft-field textarea:focus {
+  outline: none;
+  border-color: #e58ab9;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(239, 77, 158, 0.12);
+}
+
+.draft-status {
+  margin: 0;
+}
+
+.draft-status-error {
+  color: #a11a3a;
+}
+
+@media (max-width: 760px) {
+  .compose-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .draft-grid {
+    grid-template-columns: 1fr;
+  }
+}

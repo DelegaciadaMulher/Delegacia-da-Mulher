@@ -93,6 +93,48 @@ async function getPendingExpectedCases() {
   };
 }
 
+async function findPendingExpectedCaseById(expectedCaseId) {
+  const query = `
+    SELECT
+      id,
+      bo_number AS "boNumber",
+      natureza,
+      victim_name AS "victimName",
+      author_name AS "authorName",
+      status,
+      created_at AS "createdAt"
+    FROM expected_cases
+    WHERE id = $1
+      AND status = 'PENDENTE'
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query, [expectedCaseId]);
+  return rows[0] || null;
+}
+
+async function markPendingCaseAsProcessing(expectedCaseId) {
+  const query = `
+    UPDATE expected_cases
+    SET status = 'PROCESSANDO',
+        updated_at = NOW()
+    WHERE id = $1
+      AND status = 'PENDENTE'
+    RETURNING
+      id,
+      bo_number AS "boNumber",
+      natureza,
+      victim_name AS "victimName",
+      author_name AS "authorName",
+      status,
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"
+  `;
+
+  const { rows } = await pool.query(query, [expectedCaseId]);
+  return rows[0] || null;
+}
+
 async function listInvolvedPeopleSource() {
   const query = `
     SELECT
@@ -150,6 +192,42 @@ async function getActiveUsers() {
       END ASC,
       COALESCE(u.updated_at, u.created_at) DESC,
       u.full_name ASC
+  `;
+
+  const { rows } = await pool.query(query);
+  return {
+    total: rows.length,
+    items: rows
+  };
+}
+
+async function getNotifications() {
+  const query = `
+    SELECT
+      n.id,
+      COALESCE(target_person.full_name, user_person.full_name, u.full_name) AS "targetName",
+      COALESCE(target_person.cpf, user_person.cpf) AS "targetCpf",
+      COALESCE(target_person.phone, user_person.phone) AS "targetPhone",
+      n.message,
+      n.channel,
+      n.status,
+      n.scheduled_for AS "scheduledFor",
+      n.sent_at AS "sentAt",
+      n.created_at AS "createdAt",
+      c.id AS "caseId",
+      c.protocol_number AS "caseProtocolNumber"
+    FROM notifications n
+    LEFT JOIN persons target_person ON target_person.id = n.person_id
+    LEFT JOIN users u ON u.id = n.user_id
+    LEFT JOIN persons user_person ON user_person.id = u.person_id
+    LEFT JOIN cases c ON c.id = n.case_id
+    ORDER BY
+      CASE
+        WHEN n.status IN ('pending', 'queued', 'failed') THEN 0
+        ELSE 1
+      END ASC,
+      COALESCE(n.scheduled_for, n.sent_at, n.created_at) DESC,
+      n.id DESC
   `;
 
   const { rows } = await pool.query(query);
@@ -274,8 +352,11 @@ module.exports = {
   getPendingRegistrationRequests,
   approveUserRegistration,
   getPendingExpectedCases,
+  findPendingExpectedCaseById,
+  markPendingCaseAsProcessing,
   listInvolvedPeopleSource,
   getActiveUsers,
+  getNotifications,
   findUserById,
   deleteUser,
   getAgendaOfDay,

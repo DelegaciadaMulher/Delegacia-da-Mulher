@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atendimento - Delegacia da Mulher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --pink-900: #7b0f45;
+      --pink-700: #bf2b71;
+      --pink-300: #f8abd3;
+      --pink-100: #ffe4f2;
+      --ink: #2e1531;
+      --soft-ink: #5f4765;
+      --line: #f3cce2;
+      --white: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Outfit', sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 12% 10%, #ffdced 0%, #fff4fa 34%, #ffffff 74%);
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      overflow-x: hidden;
+    }
+
+    .shape {
+      position: fixed;
+      z-index: -1;
+      border-radius: 50%;
+      opacity: 0.38;
+      filter: blur(3px);
+    }
+
+    .shape-1 {
+      width: 320px;
+      height: 320px;
+      top: -90px;
+      right: -80px;
+      background: linear-gradient(45deg, var(--pink-700), var(--pink-100));
+    }
+
+    .shape-2 {
+      width: 280px;
+      height: 280px;
+      left: -90px;
+      bottom: -100px;
+      background: linear-gradient(45deg, var(--pink-300), #ffffff);
+    }
+
+    .card {
+      width: min(720px, 100%);
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: 0 18px 50px rgba(123, 15, 69, 0.09);
+      backdrop-filter: blur(10px);
+    }
+
+    .tag {
+      margin: 0 0 8px;
+      color: var(--pink-700);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(1.9rem, 3vw, 2.7rem);
+      color: var(--pink-900);
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      color: var(--soft-ink);
+      line-height: 1.6;
+      font-size: 1rem;
+    }
+
+    .bo-card {
+      margin-top: 22px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px 20px;
+      background: linear-gradient(180deg, #fff9fc 0%, #ffffff 100%);
+    }
+
+    .bo-label {
+      margin: 0 0 6px;
+      color: var(--soft-ink);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .bo-value {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .steps {
+      margin-top: 24px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 15px 16px;
+      background: #fff;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--pink-900);
+    }
+
+    .step span {
+      color: var(--soft-ink);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 18px;
+      }
+
+      .card {
+        padding: 22px 18px;
+        border-radius: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shape shape-1"></div>
+  <div class="shape shape-2"></div>
+
+  <main class="card">
+    <p class="tag">Delegacia da Mulher</p>
+    <h1>Canal de Atendimento</h1>
+    <p class="subtitle">Este link foi enviado junto ao contato oficial da equipe. Guarde esta pagina e siga as orientacoes recebidas no WhatsApp.</p>
+
+    <section class="bo-card" aria-label="Dados do boletim">
+      <p class="bo-label">BO vinculado</p>
+      <p id="boValue" class="bo-value">Nao informado</p>
+    </section>
+
+    <section class="steps" aria-label="Orientacoes">
+      <article class="step">
+        <strong>1. Confirme os dados recebidos</strong>
+        <span>Use o numero do BO e o conteudo da mensagem enviada pela equipe para validar o atendimento.</span>
+      </article>
+
+      <article class="step">
+        <strong>2. Mantenha este link salvo</strong>
+        <span>Este espaco pode ser usado como referencia para os proximos passos do atendimento digital.</span>
+      </article>
+
+      <article class="step">
+        <strong>3. Responda pelo mesmo canal</strong>
+        <span>Se precisar de suporte, continue a conversa pelo mesmo WhatsApp em que recebeu a mensagem.</span>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const bo = String(params.get('bo') || '').trim();
+    const boValue = document.getElementById('boValue');
+    if (bo) {
+      boValue.textContent = bo;
+    }
+  </script>
+</body>
+</html>

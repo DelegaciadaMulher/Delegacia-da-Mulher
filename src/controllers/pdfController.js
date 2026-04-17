@@ -12,7 +12,7 @@ async function uploadAndExtract(req, res, next) {
 
 async function importPair(req, res, next) {
   try {
-    const result = await pairImportService.importBoAndExtratoPair(req.files);
+    const result = await pairImportService.importBoAndExtratoPair(req.files, req.body);
     res.status(201).json(result);
   } catch (error) {
     next(error);

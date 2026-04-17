@@ -80,6 +80,8 @@ function normalizeExpectedCaseRecord(expectedCase) {
     local: expectedCase.local == null ? null : String(expectedCase.local).trim(),
     victimCpf: expectedCase.victimCpf == null ? null : String(expectedCase.victimCpf).trim(),
     authorCpf: expectedCase.authorCpf == null ? null : String(expectedCase.authorCpf).trim(),
+    victimPhone: expectedCase.victimPhone == null ? null : String(expectedCase.victimPhone).trim(),
+    authorPhone: expectedCase.authorPhone == null ? null : String(expectedCase.authorPhone).trim(),
     witnessName: clampExpectedCaseText(expectedCase.witnessName),
     witnessCpf: expectedCase.witnessCpf == null ? null : String(expectedCase.witnessCpf).trim(),
     witnesses: Array.isArray(expectedCase.witnesses)
@@ -103,6 +105,8 @@ function toPendingExpectedCaseItem(expectedCase) {
     natureza: expectedCase.natureza,
     victimName: expectedCase.victimName,
     authorName: expectedCase.authorName,
+    victimPhone: expectedCase.victimPhone,
+    authorPhone: expectedCase.authorPhone,
     local: expectedCase.local,
     status: expectedCase.status,
     createdAt: expectedCase.createdAt
@@ -310,10 +314,109 @@ async function listImportHistory(limit = 30) {
   };
 }
 
+async function findPendingExpectedCaseByBoNumber(boNumber) {
+  const normalizedBoNumber = normalizeBoNumber(boNumber);
+  const store = await readStore();
+  const expectedCase = store.expectedCases
+    .map(normalizeExpectedCaseRecord)
+    .find((item) => item.status === 'PENDENTE' && item.boNumber === normalizedBoNumber);
+
+  return expectedCase ? toPendingExpectedCaseItem(expectedCase) : null;
+}
+
+async function findPendingExpectedCaseById(expectedCaseId) {
+  const store = await readStore();
+  const expectedCase = store.expectedCases
+    .map(normalizeExpectedCaseRecord)
+    .find((item) => item.status === 'PENDENTE' && Number(item.id) === Number(expectedCaseId));
+
+  return expectedCase ? toPendingExpectedCaseItem(expectedCase) : null;
+}
+
+async function markPendingCaseAsProcessing(expectedCaseId) {
+  const store = await readStore();
+  const expectedCase = store.expectedCases.find((item) => Number(item.id) === Number(expectedCaseId));
+
+  if (!expectedCase || String(expectedCase.status || '').toUpperCase() !== 'PENDENTE') {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  expectedCase.status = 'PROCESSANDO';
+  expectedCase.updatedAt = now;
+
+  await writeStore(store);
+
+  return {
+    id: expectedCase.id,
+    boNumber: expectedCase.boNumber,
+    natureza: expectedCase.natureza,
+    victimName: expectedCase.victimName,
+    authorName: expectedCase.authorName,
+    status: expectedCase.status,
+    createdAt: expectedCase.createdAt || null,
+    updatedAt: expectedCase.updatedAt
+  };
+}
+
+async function linkPairToExpectedCase({ expectedCaseId, boFile, extratoFile, boData, extratoData, manualPhones }) {
+  const store = await readStore();
+  const expectedCase = store.expectedCases.find((item) => Number(item.id) === Number(expectedCaseId));
+
+  if (!expectedCase || String(expectedCase.status || '').toUpperCase() !== 'PENDENTE') {
+    const error = new Error('Caso esperado nao esta mais com status PENDENTE.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  expectedCase.status = 'PROCESSANDO';
+  expectedCase.updatedAt = now;
+  expectedCase.victimPhone = manualPhones && manualPhones.victimWhatsapp ? manualPhones.victimWhatsapp : (expectedCase.victimPhone || null);
+  expectedCase.authorPhone = manualPhones && manualPhones.authorWhatsapp ? manualPhones.authorWhatsapp : (expectedCase.authorPhone || null);
+  expectedCase.pairLink = {
+    boFileName: boFile.originalname,
+    boFilePath: boFile.path,
+    extratoFileName: extratoFile.originalname,
+    extratoFilePath: extratoFile.path,
+    extractedBoData: boData,
+    extractedExtratoData: extratoData,
+    manualPhones: manualPhones || null,
+    createdAt: now
+  };
+
+  await writeStore(store);
+
+  return {
+    expectedCase: {
+      id: expectedCase.id,
+      status: expectedCase.status,
+      boNumber: expectedCase.boNumber,
+      natureza: expectedCase.natureza,
+      victimName: expectedCase.victimName,
+      authorName: expectedCase.authorName
+    },
+    pair: {
+      id: `local-${expectedCase.id}`,
+      expectedCaseId: expectedCase.id,
+      boFileName: boFile.originalname,
+      boFilePath: boFile.path,
+      extratoFileName: extratoFile.originalname,
+      extratoFilePath: extratoFile.path,
+      createdAt: now,
+      mocked: true
+    }
+  };
+}
+
 module.exports = {
   createPendingExpectedCases,
   listPendingExpectedCases,
   countPendingExpectedCases,
   listImportHistory,
-  listInvolvedPeopleSource
+  listInvolvedPeopleSource,
+  findPendingExpectedCaseByBoNumber,
+  findPendingExpectedCaseById,
+  markPendingCaseAsProcessing,
+  linkPairToExpectedCase
 };

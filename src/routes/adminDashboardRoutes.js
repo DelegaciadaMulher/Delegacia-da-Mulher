@@ -14,8 +14,10 @@ router.put('/agenda-settings', adminDashboardController.updateAgendaSettings);
 router.get('/import-history', adminDashboardController.getImportHistory);
 router.get('/involved-people', adminDashboardController.getInvolvedPeople);
 router.get('/users', adminDashboardController.getUsers);
+router.get('/notifications', adminDashboardController.getNotifications);
 router.delete('/users/:userId', adminDashboardController.deleteUser);
 router.get('/pending-cases', adminDashboardController.getPendingCases);
+router.post('/pending-cases/:expectedCaseId/indict', adminDashboardController.indictPendingCase);
 router.get('/pending-registrations', adminDashboardController.getPendingRegistrationRequests);
 router.post('/pending-registrations/:userId/approve', adminDashboardController.approveRegistrationRequest);
 

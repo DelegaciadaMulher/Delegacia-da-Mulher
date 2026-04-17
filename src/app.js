@@ -61,6 +61,14 @@ app.get('/admin/agenda', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'admin-agenda.html'));
 });
 
+app.get('/admin/mensagens', (req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'public', 'admin-messages.html'));
+});
+
+app.get('/atendimento', (req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'public', 'atendimento.html'));
+});
+
 app.get('/admin/natureza', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'admin-nature.html'));
 });

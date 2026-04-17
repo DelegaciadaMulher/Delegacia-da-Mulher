@@ -19,6 +19,35 @@ async function getPendingCases(req, res, next) {
   }
 }
 
+async function indictPendingCase(req, res, next) {
+  try {
+    const expectedCaseId = Number(req.params.expectedCaseId);
+    if (!Number.isInteger(expectedCaseId) || expectedCaseId <= 0) {
+      const error = new Error('ID de BO pendente invalido.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const result = await adminDashboardService.indictPendingCase(expectedCaseId, req.body);
+    if (!result) {
+      const error = new Error('BO pendente nao encontrado ou ja processado.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const { delivery, ...expectedCase } = result;
+
+    res.status(200).json({
+      success: true,
+      message: `Mensagem enviada e BO ${expectedCase.boNumber || expectedCaseId} encaminhado para indiciamento.`,
+      expectedCase,
+      delivery
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function getAgendaCalendar(req, res, next) {
   try {
     const result = await adminDashboardService.getAgendaCalendar(req.query.month);
@@ -91,6 +120,15 @@ async function getUsers(req, res, next) {
   }
 }
 
+async function getNotifications(req, res, next) {
+  try {
+    const result = await adminDashboardService.getNotificationsList();
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function getImportHistory(req, res, next) {
   try {
     const result = await adminDashboardService.getImportHistory();
@@ -147,6 +185,7 @@ async function approveRegistrationRequest(req, res, next) {
 module.exports = {
   getOverview,
   getPendingCases,
+  indictPendingCase,
   getAgendaCalendar,
   getAgendaAvailability,
   createAgendaAvailability,
@@ -155,6 +194,7 @@ module.exports = {
   getInvolvedPeople,
   getPendingRegistrationRequests,
   approveRegistrationRequest,
+  getNotifications,
   getUsers,
   getImportHistory,
   deleteUser
