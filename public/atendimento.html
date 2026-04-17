@@ -448,7 +448,7 @@
           </label>
         </div>
 
-        <p id="availabilityStatus" class="muted status-text">Selecione o botao acima para carregar as datas e horarios disponiveis.</p>
+        <p id="availabilityStatus" class="muted status-text">As datas e horarios liberados pela equipe aparecem abaixo assim que a pagina carregar.</p>
 
         <div>
           <div class="section-heading">
@@ -575,6 +575,7 @@
     const schedulePanel = document.getElementById('schedulePanel');
     const noProceedPanel = document.getElementById('noProceedPanel');
     const availabilityStatus = document.getElementById('availabilityStatus');
+    const showScheduleBtn = document.getElementById('showScheduleBtn');
     const bookingStatus = document.getElementById('bookingStatus');
     const bookingSuccess = document.getElementById('bookingSuccess');
     const ackStatus = document.getElementById('ackStatus');
@@ -854,14 +855,16 @@
       syncVictimInputs();
       renderVictimCopy();
 
-      document.getElementById('showScheduleBtn').addEventListener('click', async function () {
+      schedulePanel.hidden = false;
+      noProceedPanel.hidden = true;
+      await loadAvailabilityOptions();
+      showScheduleBtn.textContent = 'Atualizar datas e horarios';
+
+      showScheduleBtn.addEventListener('click', async function () {
         schedulePanel.hidden = false;
         noProceedPanel.hidden = true;
         bookingSuccess.hidden = true;
-
-        if (!victimState.hasLoadedAvailability) {
-          await loadAvailabilityOptions();
-        }
+        await loadAvailabilityOptions();
       });
 
       document.getElementById('showNoProceedBtn').addEventListener('click', function () {

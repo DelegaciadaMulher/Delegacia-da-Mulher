@@ -1,5 +1,31 @@
 const pool = require('../config/database');
 
+const DEFAULT_SCHEDULING_SETTINGS = Object.freeze({
+  victimAuthorGapHours: 0,
+  authorSummonsMaxDays: 3,
+  updatedAt: null
+});
+
+function buildDefaultSchedulingSettings() {
+  return {
+    ...DEFAULT_SCHEDULING_SETTINGS
+  };
+}
+
+function isMissingSchedulingSettingsSchemaError(error) {
+  const message = String(error && error.message ? error.message : '').toLowerCase();
+
+  if (error && error.code === '42P01') {
+    return message.includes('scheduling_settings');
+  }
+
+  if (error && error.code === '42703') {
+    return message.includes('author_summons_max_days') || message.includes('victim_author_gap_hours');
+  }
+
+  return false;
+}
+
 async function createAvailabilitySlot({ startsAt, endsAt }) {
   const query = `
     INSERT INTO availability_slots (starts_at, ends_at, status)
@@ -115,24 +141,28 @@ async function ensureSchedulingSettingsRow() {
 }
 
 async function getSchedulingSettings() {
-  await ensureSchedulingSettingsRow();
+  try {
+    await ensureSchedulingSettingsRow();
 
-  const query = `
-    SELECT
-      victim_author_gap_hours AS "victimAuthorGapHours",
-      author_summons_max_days AS "authorSummonsMaxDays",
-      updated_at AS "updatedAt"
-    FROM scheduling_settings
-    WHERE id = 1
-    LIMIT 1
-  `;
+    const query = `
+      SELECT
+        victim_author_gap_hours AS "victimAuthorGapHours",
+        author_summons_max_days AS "authorSummonsMaxDays",
+        updated_at AS "updatedAt"
+      FROM scheduling_settings
+      WHERE id = 1
+      LIMIT 1
+    `;
 
-  const { rows } = await pool.query(query);
-  return rows[0] || {
-    victimAuthorGapHours: 0,
-    authorSummonsMaxDays: 3,
-    updatedAt: null
-  };
+    const { rows } = await pool.query(query);
+    return rows[0] || buildDefaultSchedulingSettings();
+  } catch (error) {
+    if (isMissingSchedulingSettingsSchemaError(error)) {
+      return buildDefaultSchedulingSettings();
+    }
+
+    throw error;
+  }
 }
 
 async function updateSchedulingSettings({ victimAuthorGapHours, authorSummonsMaxDays }) {
