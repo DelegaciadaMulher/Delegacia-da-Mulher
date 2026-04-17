@@ -552,8 +552,11 @@
     const params = new URLSearchParams(window.location.search);
     const currentPath = window.location.pathname;
     const hasBoNumber = Boolean(normalizeText(params.get('bo')));
+    const hasSummonsToken = Boolean(normalizeText(params.get('token')));
     const isVictimMode = currentPath === '/atendimento-vitima'
+      || currentPath === '/intimacao'
       || normalizeText(params.get('tipo')).toLowerCase() === 'vitima'
+      || hasSummonsToken
       || (currentPath === '/atendimento' && hasBoNumber);
 
     const genericModePanel = document.getElementById('genericModePanel');
