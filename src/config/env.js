@@ -2,6 +2,29 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+function parseDatabaseUrl(url) {
+  if (!url) return null;
+
+  try {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: Number(parsed.port),
+      database: parsed.pathname.slice(1), // Remove leading slash
+      user: parsed.username,
+      password: parsed.password,
+      ssl: { rejectUnauthorized: false }, // SSL com rejectUnauthorized: false
+      connectionTimeoutMillis: 10000, // 10 segundos timeout
+      query_timeout: 10000
+    };
+  } catch (error) {
+    console.warn('Erro ao fazer parse da DATABASE_URL:', error.message);
+    return null;
+  }
+}
+
+const databaseUrlConfig = parseDatabaseUrl(process.env.DATABASE_URL);
+
 const env = {
   port: Number(process.env.PORT || 3000),
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -28,7 +51,7 @@ const env = {
     apiUrl: process.env.SMS_API_URL || '',
     apiToken: process.env.SMS_API_TOKEN || ''
   },
-  db: {
+  db: databaseUrlConfig || {
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT || 5432),
     database: process.env.DB_NAME || 'delegacia_mulher',

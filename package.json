@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "migrate": "node migrate.js",
     "seed:stephanie": "node scripts/seed-admin-stephanie.js"
   },
   "keywords": [
