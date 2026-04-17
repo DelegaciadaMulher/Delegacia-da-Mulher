@@ -7,7 +7,7 @@ function buildHeaders() {
   };
 
   if (env.whatsapp.apiToken) {
-    headers.Authorization = `Bearer ${env.whatsapp.apiToken}`;
+    headers["Client-Token"] = `${env.whatsapp.apiToken}`;
   }
 
   return headers;
