@@ -69,14 +69,39 @@ function buildSummonsLink(token) {
   return `${baseUrl}/intimacao?token=${encodeURIComponent(token)}`;
 }
 
-function buildIndictmentLink({ publicBaseUrl, boNumber }) {
-  const linkUrl = new URL('/atendimento', `${resolvePublicBaseUrl(publicBaseUrl)}/`);
+function buildVictimAttendanceLink({ publicBaseUrl, boNumber, personName, phone, caseId, token }) {
+  const linkUrl = new URL('/atendimento-vitima', `${resolvePublicBaseUrl(publicBaseUrl || env.whatsapp.publicBaseUrl)}/`);
+
+  linkUrl.searchParams.set('tipo', 'vitima');
 
   if (boNumber) {
     linkUrl.searchParams.set('bo', String(boNumber).trim());
   }
 
+  if (personName) {
+    linkUrl.searchParams.set('nome', String(personName).trim());
+  }
+
+  if (phone) {
+    linkUrl.searchParams.set('telefone', String(phone).trim());
+  }
+
+  if (caseId) {
+    linkUrl.searchParams.set('caseId', String(caseId).trim());
+  }
+
+  if (token) {
+    linkUrl.searchParams.set('token', String(token).trim());
+  }
+
   return linkUrl.toString();
+}
+
+function buildIndictmentLink({ publicBaseUrl, boNumber }) {
+  return buildVictimAttendanceLink({
+    publicBaseUrl,
+    boNumber
+  });
 }
 
 function buildIndictmentMessage({ messageTemplate, link, authorName, boNumber }) {
@@ -153,7 +178,8 @@ function validateSendInput(payload) {
   return {
     summonsId,
     token,
-    phoneOverride: payload.phone || null
+    phoneOverride: payload.phone || null,
+    boNumber: payload.boNumber || null
   };
 }
 
@@ -175,7 +201,15 @@ async function sendSummonsMessage(payload) {
   }
 
   const templateName = resolveTemplateName(summons.personType);
-  const link = buildSummonsLink(input.token);
+  const link = summons.personType === 'VITIMA'
+    ? buildVictimAttendanceLink({
+        boNumber: input.boNumber,
+        personName: summons.personName,
+        phone,
+        caseId: summons.caseId,
+        token: input.token
+      })
+    : buildSummonsLink(input.token);
 
   const body = {
     to: phone,

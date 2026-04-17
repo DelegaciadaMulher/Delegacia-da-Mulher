@@ -550,8 +550,11 @@
     }
 
     const params = new URLSearchParams(window.location.search);
-    const isVictimMode = window.location.pathname === '/atendimento-vitima'
-      || normalizeText(params.get('tipo')).toLowerCase() === 'vitima';
+    const currentPath = window.location.pathname;
+    const hasBoNumber = Boolean(normalizeText(params.get('bo')));
+    const isVictimMode = currentPath === '/atendimento-vitima'
+      || normalizeText(params.get('tipo')).toLowerCase() === 'vitima'
+      || (currentPath === '/atendimento' && hasBoNumber);
 
     const genericModePanel = document.getElementById('genericModePanel');
     const victimModePanel = document.getElementById('victimModePanel');
@@ -581,6 +584,7 @@
       cpf: normalizeDigits(params.get('cpf')),
       phone: normalizeDigits(params.get('telefone') || params.get('phone')),
       email: normalizeText(params.get('email')),
+      token: normalizeText(params.get('token')),
       caseId: parsePositiveInteger(params.get('caseId')),
       availabilityDates: [],
       selectedDate: '',
@@ -592,16 +596,22 @@
 
     function buildVictimSummonsCopy() {
       const personName = victimState.personName || '________________________';
-      const boNumber = victimState.boNumber || 'XXXX-2026';
+
+      if (victimState.boNumber) {
+        return 'Ao(a) Sr(a) ' + personName + '\n'
+          + 'Por ordem do Delegado de Policia Luiz Paulo Leite Guadanucci, informo que a senhora registrou eletronicamente o BO ' + victimState.boNumber + ' e esta INTIMADA a comparecer para prestar a sua versao dos fatos em sede policial na Delegacia de Defesa da Mulher de Sao Jose dos Campos, localizada na Av. Comandante Vicente de Paula Penido, numero 234 - Parque Residencial Aquarius, Sao Jose dos Campos - SP.';
+      }
 
       return 'Ao(a) Sr(a) ' + personName + '\n'
-        + 'Por ordem do Delegado de Policia Luiz Paulo Leite Guadanucci, informo que a senhora registrou eletronicamente o BO ' + boNumber + ' e esta INTIMADA a comparecer para prestar a sua versao dos fatos em sede policial na Delegacia de Defesa da Mulher de Sao Jose dos Campos, localizada na Av. Comandante Vicente de Paula Penido, numero 234 - Parque Residencial Aquarius, Sao Jose dos Campos - SP.';
+        + 'Por ordem do Delegado de Policia Luiz Paulo Leite Guadanucci, informo que a senhora registrou eletronicamente o boletim de ocorrencia relacionado a este atendimento e esta INTIMADA a comparecer para prestar a sua versao dos fatos em sede policial na Delegacia de Defesa da Mulher de Sao Jose dos Campos, localizada na Av. Comandante Vicente de Paula Penido, numero 234 - Parque Residencial Aquarius, Sao Jose dos Campos - SP.';
     }
 
     function buildNoProceedCopy() {
-      const boNumber = victimState.boNumber || 'XXXX-2026';
+      const header = victimState.boNumber
+        ? 'ATENCAO: caso nao deseje dar prosseguimento ao BO ' + victimState.boNumber + ', e RECOMENDAVEL o seu comparecimento na Delegacia de Defesa da Mulher para maiores esclarecimentos e orientacoes.'
+        : 'ATENCAO: caso nao deseje dar prosseguimento ao boletim de ocorrencia relacionado a este atendimento, e RECOMENDAVEL o seu comparecimento na Delegacia de Defesa da Mulher para maiores esclarecimentos e orientacoes.';
 
-      return 'ATENCAO: caso nao deseje dar prosseguimento ao BO ' + boNumber + ', e RECOMENDAVEL o seu comparecimento na Delegacia de Defesa da Mulher para maiores esclarecimentos e orientacoes.\n\n'
+      return header + '\n\n'
         + 'Ainda que nao deseje mais dar prosseguimento, fica CIENTE de que este Inquerito Policial continuara tramitando nesta Delegacia de Policia e sera enviado ao Ministerio Publico do Estado de Sao Paulo, para adocao das providencias juridicas cabiveis.\n'
         + 'Ciente ( )\n\n'
         + 'Fica ainda ciente de que caso tenha realizado denuncia falsa podera incidir no crime previsto no Codigo Penal, art. 339: "Dar causa a instauracao de inquerito policial, de procedimento investigatorio criminal (...) contra alguem, imputando-lhe crime (...) de que o sabe inocente: Pena - reclusao, de dois a oito anos, e multa."';
