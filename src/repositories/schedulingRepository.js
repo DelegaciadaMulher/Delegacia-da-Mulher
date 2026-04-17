@@ -48,6 +48,20 @@ async function listAvailabilityByDate(date) {
   return rows;
 }
 
+async function listAvailabilityDatesInRange({ startDate, endDate }) {
+  const query = `
+    SELECT DISTINCT starts_at::date::text AS date
+    FROM availability_slots
+    WHERE starts_at::date >= $1::date
+      AND starts_at::date <= $2::date
+      AND status = 'DISPONIVEL'
+    ORDER BY date ASC
+  `;
+
+  const { rows } = await pool.query(query, [startDate, endDate]);
+  return rows.map((row) => row.date);
+}
+
 async function listAppointmentsByCaseAndRoles({ caseId, roles }) {
   const query = `
     SELECT
@@ -262,6 +276,7 @@ module.exports = {
   createAvailabilitySlot,
   findAvailabilitySlotById,
   listAvailabilityByDate,
+  listAvailabilityDatesInRange,
   listAppointmentsByCaseAndRoles,
   findLatestSummonsDeadlineByCaseAndPersonType,
   getSchedulingSettings,

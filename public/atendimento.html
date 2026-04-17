@@ -11,12 +11,17 @@
     :root {
       --pink-900: #7b0f45;
       --pink-700: #bf2b71;
+      --pink-400: #f5b8d8;
       --pink-300: #f8abd3;
       --pink-100: #ffe4f2;
       --ink: #2e1531;
       --soft-ink: #5f4765;
       --line: #f3cce2;
+      --line-strong: #e8a8ca;
       --white: #fff;
+      --warning-bg: #fff5f8;
+      --success-bg: #f4fff8;
+      --success-line: #b8e7ca;
     }
 
     * {
@@ -60,7 +65,7 @@
     }
 
     .card {
-      width: min(720px, 100%);
+      width: min(860px, 100%);
       background: rgba(255, 255, 255, 0.96);
       border: 1px solid var(--line);
       border-radius: 28px;
@@ -78,26 +83,82 @@
       text-transform: uppercase;
     }
 
-    h1 {
+    h1,
+    h2 {
       margin: 0;
       font-family: 'Space Grotesk', sans-serif;
-      font-size: clamp(1.9rem, 3vw, 2.7rem);
       color: var(--pink-900);
+    }
+
+    h1 {
+      font-size: clamp(1.9rem, 3vw, 2.7rem);
+    }
+
+    h2 {
+      font-size: 1.3rem;
+    }
+
+    .subtitle,
+    .muted,
+    .step span,
+    .inline-hint,
+    .info-copy,
+    .warning-copy {
+      color: var(--soft-ink);
+      line-height: 1.6;
     }
 
     .subtitle {
       margin: 12px 0 0;
-      color: var(--soft-ink);
-      line-height: 1.6;
       font-size: 1rem;
     }
 
-    .bo-card {
+    .mode-panel[hidden] {
+      display: none;
+    }
+
+    .bo-card,
+    .notice-panel,
+    .flow-panel,
+    .confirmation-box,
+    .step {
       margin-top: 22px;
       border: 1px solid var(--line);
       border-radius: 20px;
       padding: 18px 20px;
       background: linear-gradient(180deg, #fff9fc 0%, #ffffff 100%);
+    }
+
+    .notice-panel {
+      background: linear-gradient(180deg, #fff2f8 0%, #ffffff 100%);
+      border-color: var(--line-strong);
+    }
+
+    .flow-panel {
+      display: grid;
+      gap: 16px;
+    }
+
+    .warning-panel {
+      background: linear-gradient(180deg, var(--warning-bg) 0%, #ffffff 100%);
+    }
+
+    .confirmation-box {
+      background: linear-gradient(180deg, var(--success-bg) 0%, #ffffff 100%);
+      border-color: var(--success-line);
+    }
+
+    .bo-grid,
+    .input-grid,
+    .date-grid,
+    .slot-grid,
+    .action-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bo-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
 
     .bo-label {
@@ -111,7 +172,7 @@
 
     .bo-value {
       margin: 0;
-      font-size: 1.25rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: var(--ink);
     }
@@ -122,22 +183,156 @@
       gap: 12px;
     }
 
-    .step {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 15px 16px;
-      background: #fff;
-    }
-
     .step strong {
       display: block;
       margin-bottom: 6px;
       color: var(--pink-900);
     }
 
-    .step span {
+    .legal-copy,
+    .warning-copy {
+      margin: 0;
+      white-space: pre-line;
+    }
+
+    .location-box {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .action-stack {
+      margin-top: 22px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .primary-btn,
+    .secondary-btn,
+    .date-btn,
+    .slot-btn {
+      appearance: none;
+      border: none;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--pink-900), var(--pink-700));
+      color: var(--white);
+      box-shadow: 0 14px 28px rgba(123, 15, 69, 0.18);
+    }
+
+    .secondary-btn {
+      background: #fff;
+      color: var(--pink-900);
+      border: 1px solid var(--line-strong);
+    }
+
+    .date-btn,
+    .slot-btn {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      text-align: left;
+    }
+
+    .date-btn strong,
+    .slot-btn strong {
+      display: block;
+      color: var(--pink-900);
+    }
+
+    .date-btn small,
+    .slot-btn small {
+      display: block;
+      margin-top: 4px;
       color: var(--soft-ink);
-      line-height: 1.5;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .primary-btn:hover,
+    .secondary-btn:hover,
+    .date-btn:hover,
+    .slot-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .primary-btn:disabled,
+    .secondary-btn:disabled,
+    .date-btn:disabled,
+    .slot-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .date-btn.is-selected,
+    .slot-btn.is-selected {
+      border-color: var(--pink-700);
+      background: #fff0f8;
+      box-shadow: 0 10px 18px rgba(191, 43, 113, 0.12);
+    }
+
+    .input-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field span {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--pink-900);
+    }
+
+    .field input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .field input:focus {
+      outline: 2px solid rgba(191, 43, 113, 0.18);
+      border-color: var(--pink-700);
+    }
+
+    .date-grid,
+    .slot-grid {
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    }
+
+    .section-heading {
+      display: grid;
+      gap: 6px;
+    }
+
+    .status-text {
+      min-height: 24px;
+    }
+
+    .status-text.is-error {
+      color: #9f1f46;
+      font-weight: 700;
+    }
+
+    .status-text.is-success {
+      color: #1d7a48;
+      font-weight: 700;
     }
 
     @media (max-width: 640px) {
@@ -149,6 +344,14 @@
         padding: 22px 18px;
         border-radius: 22px;
       }
+
+      .action-stack,
+      .input-grid,
+      .date-grid,
+      .slot-grid,
+      .bo-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -157,39 +360,525 @@
   <div class="shape shape-2"></div>
 
   <main class="card">
-    <p class="tag">Delegacia da Mulher</p>
-    <h1>Canal de Atendimento</h1>
-    <p class="subtitle">Este link foi enviado junto ao contato oficial da equipe. Guarde esta pagina e siga as orientacoes recebidas no WhatsApp.</p>
+    <section id="genericModePanel" class="mode-panel">
+      <p class="tag">Delegacia da Mulher</p>
+      <h1>Canal de Atendimento</h1>
+      <p class="subtitle">Este link foi enviado junto ao contato oficial da equipe. Guarde esta pagina e siga as orientacoes recebidas no WhatsApp.</p>
 
-    <section class="bo-card" aria-label="Dados do boletim">
-      <p class="bo-label">BO vinculado</p>
-      <p id="boValue" class="bo-value">Nao informado</p>
+      <section class="bo-card" aria-label="Dados do boletim">
+        <p class="bo-label">BO vinculado</p>
+        <p id="boValue" class="bo-value">Nao informado</p>
+      </section>
+
+      <section class="steps" aria-label="Orientacoes">
+        <article class="step">
+          <strong>1. Confirme os dados recebidos</strong>
+          <span>Use o numero do BO e o conteudo da mensagem enviada pela equipe para validar o atendimento.</span>
+        </article>
+
+        <article class="step">
+          <strong>2. Mantenha este link salvo</strong>
+          <span>Este espaco pode ser usado como referencia para os proximos passos do atendimento digital.</span>
+        </article>
+
+        <article class="step">
+          <strong>3. Responda pelo mesmo canal</strong>
+          <span>Se precisar de suporte, continue a conversa pelo mesmo WhatsApp em que recebeu a mensagem.</span>
+        </article>
+      </section>
     </section>
 
-    <section class="steps" aria-label="Orientacoes">
-      <article class="step">
-        <strong>1. Confirme os dados recebidos</strong>
-        <span>Use o numero do BO e o conteudo da mensagem enviada pela equipe para validar o atendimento.</span>
-      </article>
+    <section id="victimModePanel" class="mode-panel" hidden>
+      <p class="tag">Delegacia da Mulher</p>
+      <h1>Atendimento da Vitima</h1>
+      <p class="subtitle">Escolha um horario disponibilizado pela equipe ou registre a sua ciencia sobre o boletim sem prosseguimento imediato.</p>
 
-      <article class="step">
-        <strong>2. Mantenha este link salvo</strong>
-        <span>Este espaco pode ser usado como referencia para os proximos passos do atendimento digital.</span>
-      </article>
+      <section class="notice-panel" aria-label="Mensagem de intimacao">
+        <p id="victimSummonsText" class="legal-copy"></p>
 
-      <article class="step">
-        <strong>3. Responda pelo mesmo canal</strong>
-        <span>Se precisar de suporte, continue a conversa pelo mesmo WhatsApp em que recebeu a mensagem.</span>
-      </article>
+        <div class="location-box">
+          <strong>Delegacia de Defesa da Mulher de Sao Jose dos Campos</strong>
+          <p class="info-copy">Av. Comandante Vicente de Paula Penido, numero 234 - Parque Residencial Aquarius, Sao Jose dos Campos - SP.</p>
+        </div>
+      </section>
+
+      <section class="bo-card" aria-label="Resumo do atendimento da vitima">
+        <div class="bo-grid">
+          <div>
+            <p class="bo-label">BO</p>
+            <p id="victimBoValue" class="bo-value">Nao informado</p>
+          </div>
+          <div>
+            <p class="bo-label">Pessoa intimada</p>
+            <p id="victimNameValue" class="bo-value">Nao informada</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="action-stack" aria-label="Acoes da vitima">
+        <button id="showScheduleBtn" class="primary-btn" type="button">Escolher data e horario</button>
+        <button id="showNoProceedBtn" class="secondary-btn" type="button">Nao desejo dar prosseguimento ao Boletim de ocorrencia</button>
+      </div>
+
+      <section id="schedulePanel" class="flow-panel" aria-label="Escolha de data e horario" hidden>
+        <div class="section-heading">
+          <h2>Agendar comparecimento</h2>
+          <p class="muted">Confirme seus dados e escolha uma das datas e horarios liberados pelo admin.</p>
+        </div>
+
+        <div class="input-grid">
+          <label class="field" for="personNameInput">
+            <span>Nome completo</span>
+            <input id="personNameInput" type="text" autocomplete="name" />
+          </label>
+
+          <label class="field" for="personCpfInput">
+            <span>CPF</span>
+            <input id="personCpfInput" type="text" inputmode="numeric" autocomplete="off" placeholder="00000000000" />
+          </label>
+
+          <label class="field" for="personPhoneInput">
+            <span>Telefone</span>
+            <input id="personPhoneInput" type="tel" inputmode="numeric" autocomplete="tel" placeholder="11999999999" />
+          </label>
+
+          <label class="field" for="personEmailInput">
+            <span>E-mail</span>
+            <input id="personEmailInput" type="email" autocomplete="email" placeholder="voce@exemplo.com" />
+          </label>
+        </div>
+
+        <p id="availabilityStatus" class="muted status-text">Selecione o botao acima para carregar as datas e horarios disponiveis.</p>
+
+        <div>
+          <div class="section-heading">
+            <h2>Datas disponiveis</h2>
+            <p class="inline-hint">Somente dias liberados pela equipe aparecem aqui.</p>
+          </div>
+          <div id="dateOptions" class="date-grid"></div>
+        </div>
+
+        <div>
+          <div class="section-heading">
+            <h2>Horarios disponiveis</h2>
+            <p class="inline-hint">Escolha um horario da data selecionada.</p>
+          </div>
+          <div id="slotOptions" class="slot-grid"></div>
+        </div>
+
+        <button id="bookAppointmentBtn" class="primary-btn" type="button" disabled>Confirmar horario selecionado</button>
+        <p id="bookingStatus" class="muted status-text"></p>
+        <div id="bookingSuccess" class="confirmation-box" hidden></div>
+      </section>
+
+      <section id="noProceedPanel" class="flow-panel warning-panel" aria-label="Ciencia sem prosseguimento" hidden>
+        <div class="section-heading">
+          <h2>Registro de ciencia</h2>
+          <p class="muted">Leia atentamente antes de marcar a sua ciencia.</p>
+        </div>
+
+        <p id="noProceedMessage" class="warning-copy"></p>
+        <button id="acknowledgeBtn" class="primary-btn" type="button">Ciente</button>
+        <p id="ackStatus" class="muted status-text"></p>
+      </section>
     </section>
   </main>
 
   <script>
+    function normalizeText(value) {
+      return String(value || '').trim();
+    }
+
+    function normalizeDigits(value) {
+      return String(value || '').replace(/\D/g, '');
+    }
+
+    function parsePositiveInteger(value) {
+      const parsed = Number(value);
+      return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+    }
+
+    function formatDateLabel(dateKey) {
+      if (!dateKey) {
+        return '-';
+      }
+
+      const parsedDate = new Date(dateKey + 'T00:00:00');
+      if (Number.isNaN(parsedDate.getTime())) {
+        return dateKey;
+      }
+
+      return parsedDate.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    }
+
+    function formatTime(isoValue) {
+      if (!isoValue) {
+        return '-';
+      }
+
+      const parsedDate = new Date(isoValue);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return '-';
+      }
+
+      return parsedDate.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function formatTimeRange(startIso, endIso) {
+      return formatTime(startIso) + ' as ' + formatTime(endIso);
+    }
+
+    function setStatus(element, message, kind) {
+      element.textContent = message || '';
+      element.classList.remove('is-error', 'is-success');
+
+      if (kind === 'error') {
+        element.classList.add('is-error');
+      }
+
+      if (kind === 'success') {
+        element.classList.add('is-success');
+      }
+    }
+
     const params = new URLSearchParams(window.location.search);
-    const bo = String(params.get('bo') || '').trim();
-    const boValue = document.getElementById('boValue');
-    if (bo) {
-      boValue.textContent = bo;
+    const isVictimMode = window.location.pathname === '/atendimento-vitima'
+      || normalizeText(params.get('tipo')).toLowerCase() === 'vitima';
+
+    const genericModePanel = document.getElementById('genericModePanel');
+    const victimModePanel = document.getElementById('victimModePanel');
+
+    const genericBoValue = document.getElementById('boValue');
+    const victimBoValue = document.getElementById('victimBoValue');
+    const victimNameValue = document.getElementById('victimNameValue');
+    const victimSummonsText = document.getElementById('victimSummonsText');
+    const noProceedMessage = document.getElementById('noProceedMessage');
+    const schedulePanel = document.getElementById('schedulePanel');
+    const noProceedPanel = document.getElementById('noProceedPanel');
+    const availabilityStatus = document.getElementById('availabilityStatus');
+    const bookingStatus = document.getElementById('bookingStatus');
+    const bookingSuccess = document.getElementById('bookingSuccess');
+    const ackStatus = document.getElementById('ackStatus');
+    const personNameInput = document.getElementById('personNameInput');
+    const personCpfInput = document.getElementById('personCpfInput');
+    const personPhoneInput = document.getElementById('personPhoneInput');
+    const personEmailInput = document.getElementById('personEmailInput');
+    const dateOptions = document.getElementById('dateOptions');
+    const slotOptions = document.getElementById('slotOptions');
+    const bookAppointmentBtn = document.getElementById('bookAppointmentBtn');
+
+    const victimState = {
+      boNumber: normalizeText(params.get('bo')),
+      personName: normalizeText(params.get('nome') || params.get('fullName')),
+      cpf: normalizeDigits(params.get('cpf')),
+      phone: normalizeDigits(params.get('telefone') || params.get('phone')),
+      email: normalizeText(params.get('email')),
+      caseId: parsePositiveInteger(params.get('caseId')),
+      availabilityDates: [],
+      selectedDate: '',
+      selectedSlotId: null,
+      selectedSlotLabel: '',
+      hasLoadedAvailability: false,
+      bookingComplete: false
+    };
+
+    function buildVictimSummonsCopy() {
+      const personName = victimState.personName || '________________________';
+      const boNumber = victimState.boNumber || 'XXXX-2026';
+
+      return 'Ao(a) Sr(a) ' + personName + '\n'
+        + 'Por ordem do Delegado de Policia Luiz Paulo Leite Guadanucci, informo que a senhora registrou eletronicamente o BO ' + boNumber + ' e esta INTIMADA a comparecer para prestar a sua versao dos fatos em sede policial na Delegacia de Defesa da Mulher de Sao Jose dos Campos, localizada na Av. Comandante Vicente de Paula Penido, numero 234 - Parque Residencial Aquarius, Sao Jose dos Campos - SP.';
+    }
+
+    function buildNoProceedCopy() {
+      const boNumber = victimState.boNumber || 'XXXX-2026';
+
+      return 'ATENCAO: caso nao deseje dar prosseguimento ao BO ' + boNumber + ', e RECOMENDAVEL o seu comparecimento na Delegacia de Defesa da Mulher para maiores esclarecimentos e orientacoes.\n\n'
+        + 'Ainda que nao deseje mais dar prosseguimento, fica CIENTE de que este Inquerito Policial continuara tramitando nesta Delegacia de Policia e sera enviado ao Ministerio Publico do Estado de Sao Paulo, para adocao das providencias juridicas cabiveis.\n'
+        + 'Ciente ( )\n\n'
+        + 'Fica ainda ciente de que caso tenha realizado denuncia falsa podera incidir no crime previsto no Codigo Penal, art. 339: "Dar causa a instauracao de inquerito policial, de procedimento investigatorio criminal (...) contra alguem, imputando-lhe crime (...) de que o sabe inocente: Pena - reclusao, de dois a oito anos, e multa."';
+    }
+
+    function syncVictimInputs() {
+      personNameInput.value = victimState.personName;
+      personCpfInput.value = victimState.cpf;
+      personPhoneInput.value = victimState.phone;
+      personEmailInput.value = victimState.email;
+    }
+
+    function renderVictimCopy() {
+      victimBoValue.textContent = victimState.boNumber || 'Nao informado';
+      victimNameValue.textContent = victimState.personName || 'Nao informada';
+      victimSummonsText.textContent = buildVictimSummonsCopy();
+      noProceedMessage.textContent = buildNoProceedCopy();
+    }
+
+    async function loadVictimContextFromBo() {
+      if (!victimState.boNumber) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/scheduling/attendance-context?bo=' + encodeURIComponent(victimState.boNumber));
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        victimState.boNumber = normalizeText(data.boNumber) || victimState.boNumber;
+        victimState.personName = victimState.personName || normalizeText(data.victimName);
+        victimState.cpf = victimState.cpf || normalizeDigits(data.victimCpf);
+        victimState.phone = victimState.phone || normalizeDigits(data.victimPhone);
+        victimState.email = victimState.email || normalizeText(data.victimEmail);
+      } catch (error) {
+        // Mantem a pagina funcional mesmo sem contexto do backend.
+      }
+    }
+
+    function renderDateOptions() {
+      if (!victimState.availabilityDates.length) {
+        dateOptions.innerHTML = '<p class="muted">Nenhuma data liberada no momento.</p>';
+        slotOptions.innerHTML = '<p class="muted">Nenhum horario disponivel.</p>';
+        bookAppointmentBtn.disabled = true;
+        return;
+      }
+
+      dateOptions.innerHTML = victimState.availabilityDates
+        .map(function (item) {
+          const isSelected = item.date === victimState.selectedDate;
+          return '<button type="button" class="date-btn ' + (isSelected ? 'is-selected' : '') + '" data-date="' + item.date + '">' 
+            + '<strong>' + formatDateLabel(item.date) + '</strong>'
+            + '<small>' + item.slotCount + ' horario(s)</small>'
+            + '</button>';
+        })
+        .join('');
+
+      dateOptions.querySelectorAll('[data-date]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          victimState.selectedDate = button.getAttribute('data-date') || '';
+          victimState.selectedSlotId = null;
+          victimState.selectedSlotLabel = '';
+          renderDateOptions();
+          renderSlotOptions();
+          bookAppointmentBtn.disabled = true;
+          setStatus(bookingStatus, '', '');
+        });
+      });
+    }
+
+    function renderSlotOptions() {
+      const selectedDate = victimState.availabilityDates.find(function (item) {
+        return item.date === victimState.selectedDate;
+      });
+
+      if (!selectedDate) {
+        slotOptions.innerHTML = '<p class="muted">Selecione uma data para ver os horarios.</p>';
+        return;
+      }
+
+      slotOptions.innerHTML = selectedDate.slots
+        .map(function (slot) {
+          const isSelected = Number(slot.id) === Number(victimState.selectedSlotId);
+          const slotLabel = formatTimeRange(slot.startsAt, slot.endsAt);
+
+          return '<button type="button" class="slot-btn ' + (isSelected ? 'is-selected' : '') + '" data-slot-id="' + slot.id + '" data-slot-label="' + slotLabel + '">'
+            + '<strong>' + slotLabel + '</strong>'
+            + '<small>Status: ' + normalizeText(slot.status || 'DISPONIVEL') + '</small>'
+            + '</button>';
+        })
+        .join('');
+
+      slotOptions.querySelectorAll('[data-slot-id]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          victimState.selectedSlotId = Number(button.getAttribute('data-slot-id')) || null;
+          victimState.selectedSlotLabel = normalizeText(button.getAttribute('data-slot-label'));
+          renderSlotOptions();
+          bookAppointmentBtn.disabled = !victimState.selectedSlotId || victimState.bookingComplete;
+          setStatus(bookingStatus, '', '');
+        });
+      });
+    }
+
+    async function loadAvailabilityOptions() {
+      setStatus(availabilityStatus, 'Carregando datas e horarios liberados pela equipe...', '');
+
+      try {
+        const query = new URLSearchParams();
+        query.set('days', '45');
+        query.set('personRole', 'VITIMA');
+
+        if (victimState.caseId) {
+          query.set('caseId', String(victimState.caseId));
+        }
+
+        const response = await fetch('/api/scheduling/availability-options?' + query.toString());
+        const data = await response.json().catch(function () {
+          return {};
+        });
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Falha ao carregar a disponibilidade.');
+        }
+
+        victimState.availabilityDates = Array.isArray(data.dates) ? data.dates : [];
+        victimState.selectedDate = victimState.availabilityDates.length ? victimState.availabilityDates[0].date : '';
+        victimState.selectedSlotId = null;
+        victimState.selectedSlotLabel = '';
+        victimState.hasLoadedAvailability = true;
+
+        renderDateOptions();
+        renderSlotOptions();
+
+        if (victimState.availabilityDates.length) {
+          setStatus(availabilityStatus, 'Escolha uma data e depois um horario disponivel.', '');
+        } else {
+          setStatus(availabilityStatus, 'Nenhum horario foi liberado pelo admin ate o momento.', '');
+        }
+      } catch (error) {
+        victimState.availabilityDates = [];
+        renderDateOptions();
+        renderSlotOptions();
+        setStatus(availabilityStatus, error.message || 'Falha ao carregar a disponibilidade.', 'error');
+      }
+    }
+
+    function readVictimFormValues() {
+      victimState.personName = normalizeText(personNameInput.value);
+      victimState.cpf = normalizeDigits(personCpfInput.value);
+      victimState.phone = normalizeDigits(personPhoneInput.value);
+      victimState.email = normalizeText(personEmailInput.value);
+      renderVictimCopy();
+    }
+
+    function validateVictimForm() {
+      readVictimFormValues();
+
+      if (!victimState.personName) {
+        throw new Error('Informe o nome completo para confirmar o agendamento.');
+      }
+
+      if (victimState.cpf.length !== 11) {
+        throw new Error('Informe o CPF com 11 digitos para confirmar o agendamento.');
+      }
+
+      if (!victimState.selectedSlotId) {
+        throw new Error('Escolha um horario antes de confirmar o agendamento.');
+      }
+    }
+
+    async function bookVictimAppointment() {
+      try {
+        validateVictimForm();
+        setStatus(bookingStatus, 'Confirmando o horario selecionado...', '');
+
+        const payload = {
+          slotId: victimState.selectedSlotId,
+          appointmentType: 'ATENDIMENTO',
+          personRole: 'VITIMA',
+          person: {
+            fullName: victimState.personName,
+            cpf: victimState.cpf,
+            phone: victimState.phone || null,
+            email: victimState.email || null
+          },
+          notes: victimState.boNumber
+            ? 'Agendamento realizado pela pagina publica da vitima para o BO ' + victimState.boNumber + '.'
+            : 'Agendamento realizado pela pagina publica da vitima.'
+        };
+
+        if (victimState.caseId) {
+          payload.caseId = victimState.caseId;
+        }
+
+        const response = await fetch('/api/scheduling/appointments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(function () {
+          return {};
+        });
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Nao foi possivel confirmar o agendamento.');
+        }
+
+        victimState.bookingComplete = true;
+        bookAppointmentBtn.disabled = true;
+        bookingSuccess.hidden = false;
+        bookingSuccess.innerHTML = '<strong>Horario confirmado.</strong>'
+          + '<p class="info-copy">Comparecimento agendado para <strong>' + victimState.selectedSlotLabel + '</strong> em <strong>' + formatDateLabel(victimState.selectedDate) + '</strong>.</p>'
+          + '<p class="info-copy">Codigo de confirmacao: <strong>' + normalizeText(data && data.appointment && data.appointment.attendanceCode) + '</strong>.</p>';
+
+        setStatus(bookingStatus, 'Agendamento realizado com sucesso.', 'success');
+        await loadAvailabilityOptions();
+      } catch (error) {
+        setStatus(bookingStatus, error.message || 'Nao foi possivel confirmar o agendamento.', 'error');
+      }
+    }
+
+    async function initVictimMode() {
+      genericModePanel.hidden = true;
+      victimModePanel.hidden = false;
+
+      await loadVictimContextFromBo();
+      syncVictimInputs();
+      renderVictimCopy();
+
+      document.getElementById('showScheduleBtn').addEventListener('click', async function () {
+        schedulePanel.hidden = false;
+        noProceedPanel.hidden = true;
+        bookingSuccess.hidden = true;
+
+        if (!victimState.hasLoadedAvailability) {
+          await loadAvailabilityOptions();
+        }
+      });
+
+      document.getElementById('showNoProceedBtn').addEventListener('click', function () {
+        noProceedPanel.hidden = false;
+        schedulePanel.hidden = true;
+        setStatus(ackStatus, '', '');
+      });
+
+      document.getElementById('acknowledgeBtn').addEventListener('click', function () {
+        setStatus(ackStatus, 'Ciencia registrada nesta sessao. Em caso de duvida, compareca a Delegacia para orientacoes adicionais.', 'success');
+      });
+
+      [personNameInput, personCpfInput, personPhoneInput, personEmailInput].forEach(function (input) {
+        input.addEventListener('input', function () {
+          readVictimFormValues();
+        });
+      });
+
+      bookAppointmentBtn.addEventListener('click', function () {
+        if (!victimState.bookingComplete) {
+          bookVictimAppointment();
+        }
+      });
+    }
+
+    function initGenericMode() {
+      genericModePanel.hidden = false;
+      victimModePanel.hidden = true;
+      genericBoValue.textContent = victimState.boNumber || 'Nao informado';
+    }
+
+    if (isVictimMode) {
+      initVictimMode();
+    } else {
+      initGenericMode();
     }
   </script>
 </body>

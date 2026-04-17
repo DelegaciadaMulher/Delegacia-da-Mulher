@@ -4,6 +4,8 @@ const crypto = require('crypto');
 
 const schedulingRepository = require('../repositories/schedulingRepository');
 const localSchedulingRepository = require('../repositories/localSchedulingRepository');
+const adminDashboardRepository = require('../repositories/adminDashboardRepository');
+const localExpectedCaseRepository = require('../repositories/localExpectedCaseRepository');
 const personService = require('./personService');
 const victimNotificationService = require('./victimNotificationService');
 const env = require('../config/env');
@@ -31,6 +33,14 @@ function normalizeDateOnly(value) {
 
   const parsed = dayjs(raw);
   return parsed.isValid() ? parsed.format('YYYY-MM-DD') : null;
+}
+
+function normalizeBoNumber(value) {
+  return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
+function normalizePhone(value) {
+  return String(value || '').replace(/\D/g, '');
 }
 
 function validateSchedulingSettingsPayload(payload, currentSettings = {}) {
@@ -204,6 +214,65 @@ function validateListAvailabilityInput(payload) {
     caseId,
     personRole
   };
+}
+
+function validateAvailabilityOptionsInput(payload) {
+  const input = payload || {};
+  const today = dayjs().format('YYYY-MM-DD');
+  const startDate = normalizeDateOnly(input.startDate || today);
+
+  if (!startDate || !dayjs(startDate, 'YYYY-MM-DD', true).isValid()) {
+    const error = new Error('startDate invalida. Use YYYY-MM-DD.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const days = Number(input.days || 30);
+  if (!Number.isInteger(days) || days < 1 || days > 90) {
+    const error = new Error('days deve ser um numero inteiro entre 1 e 90.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let caseId = null;
+  if (input.caseId != null && String(input.caseId).trim() !== '') {
+    caseId = Number(input.caseId);
+    if (!Number.isInteger(caseId) || caseId <= 0) {
+      const error = new Error('caseId invalido.');
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  let personRole = null;
+  if (input.personRole != null && String(input.personRole).trim() !== '') {
+    personRole = normalizePersonRole(input.personRole);
+    if (!['VITIMA', 'AUTOR', 'TESTEMUNHA', 'RESPONSAVEL'].includes(personRole)) {
+      const error = new Error('personRole invalido. Use VITIMA, AUTOR, TESTEMUNHA ou RESPONSAVEL.');
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  return {
+    startDate,
+    endDate: dayjs(startDate).add(days - 1, 'day').format('YYYY-MM-DD'),
+    days,
+    caseId,
+    personRole
+  };
+}
+
+function validateVictimAttendanceContextInput(payload) {
+  const boNumber = normalizeBoNumber(payload && payload.bo);
+
+  if (!boNumber) {
+    const error = new Error('bo e obrigatorio para localizar o atendimento da vitima.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return { boNumber };
 }
 
 function buildGapViolationError(victimAuthorGapHours) {
@@ -418,6 +487,92 @@ async function listAvailability(date) {
   };
 }
 
+async function listAvailabilityOptions(payload) {
+  const input = validateAvailabilityOptionsInput(payload);
+  const repository = shouldUseLocalSimulation() ? localSchedulingRepository : schedulingRepository;
+  const dateKeys = await repository.listAvailabilityDatesInRange({
+    startDate: input.startDate,
+    endDate: input.endDate
+  });
+
+  const dates = [];
+
+  for (const dateKey of dateKeys) {
+    const availability = await listAvailability({
+      date: dateKey,
+      caseId: input.caseId,
+      personRole: input.personRole
+    });
+
+    if (!availability || !Array.isArray(availability.slots) || !availability.slots.length) {
+      continue;
+    }
+
+    dates.push({
+      date: dateKey,
+      slotCount: availability.slots.length,
+      slots: availability.slots
+    });
+  }
+
+  return {
+    startDate: input.startDate,
+    endDate: input.endDate,
+    days: input.days,
+    totalDates: dates.length,
+    totalSlots: dates.reduce((total, item) => total + item.slotCount, 0),
+    dates
+  };
+}
+
+async function getVictimAttendanceContext(payload) {
+  const input = validateVictimAttendanceContextInput(payload);
+
+  if (shouldUseLocalSimulation()) {
+    const localResult = await localExpectedCaseRepository.findVictimAttendanceContextByBoNumber(input.boNumber);
+    return localResult ? {
+      mocked: true,
+      boNumber: localResult.boNumber,
+      victimName: localResult.victimName || null,
+      victimCpf: localResult.victimCpf || null,
+      victimPhone: normalizePhone(localResult.victimPhone) || null,
+      victimEmail: localResult.victimEmail || null,
+      natureza: localResult.natureza || null
+    } : null;
+  }
+
+  try {
+    const result = await adminDashboardRepository.findVictimAttendanceContextByBoNumber(input.boNumber);
+    if (!result) {
+      return null;
+    }
+
+    return {
+      boNumber: result.boNumber,
+      victimName: result.victimName || null,
+      victimCpf: result.victimCpf || null,
+      victimPhone: normalizePhone(result.victimPhone) || null,
+      victimEmail: result.victimEmail || null,
+      natureza: result.natureza || null
+    };
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    const localResult = await localExpectedCaseRepository.findVictimAttendanceContextByBoNumber(input.boNumber);
+    return localResult ? {
+      mocked: true,
+      boNumber: localResult.boNumber,
+      victimName: localResult.victimName || null,
+      victimCpf: localResult.victimCpf || null,
+      victimPhone: normalizePhone(localResult.victimPhone) || null,
+      victimEmail: localResult.victimEmail || null,
+      natureza: localResult.natureza || null
+    } : null;
+  }
+}
+
 function validateBookPayload(payload) {
   const slotId = Number(payload.slotId);
   const appointmentType = String(payload.appointmentType || 'ATENDIMENTO').trim().toUpperCase();
@@ -580,6 +735,8 @@ async function updateSchedulingSettings(payload) {
 module.exports = {
   generateAvailability,
   listAvailability,
+  listAvailabilityOptions,
+  getVictimAttendanceContext,
   bookAppointment,
   confirmAttendance,
   getSchedulingSettings,

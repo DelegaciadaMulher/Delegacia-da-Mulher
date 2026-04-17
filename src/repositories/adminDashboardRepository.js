@@ -113,6 +113,34 @@ async function findPendingExpectedCaseById(expectedCaseId) {
   return rows[0] || null;
 }
 
+async function findVictimAttendanceContextByBoNumber(boNumber) {
+  const query = `
+    SELECT
+      ec.bo_number AS "boNumber",
+      ec.natureza,
+      ec.victim_name AS "victimName",
+      COALESCE(NULLIF(pair.extracted_bo_data->>'victimCpf', ''), NULL) AS "victimCpf",
+      person.phone AS "victimPhone",
+      person.email AS "victimEmail"
+    FROM expected_cases ec
+    LEFT JOIN LATERAL (
+      SELECT cpp.extracted_bo_data
+      FROM case_pdf_pairs cpp
+      WHERE cpp.expected_case_id = ec.id
+      ORDER BY cpp.created_at DESC
+      LIMIT 1
+    ) pair ON TRUE
+    LEFT JOIN persons person
+      ON person.cpf = COALESCE(NULLIF(pair.extracted_bo_data->>'victimCpf', ''), NULL)
+    WHERE UPPER(REPLACE(ec.bo_number, ' ', '')) = UPPER(REPLACE($1, ' ', ''))
+    ORDER BY COALESCE(ec.updated_at, ec.created_at) DESC
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query, [boNumber]);
+  return rows[0] || null;
+}
+
 async function markPendingCaseAsProcessing(expectedCaseId) {
   const query = `
     UPDATE expected_cases
@@ -353,6 +381,7 @@ module.exports = {
   approveUserRegistration,
   getPendingExpectedCases,
   findPendingExpectedCaseById,
+  findVictimAttendanceContextByBoNumber,
   markPendingCaseAsProcessing,
   listInvolvedPeopleSource,
   getActiveUsers,

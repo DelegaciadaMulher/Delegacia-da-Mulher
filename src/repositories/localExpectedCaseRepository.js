@@ -333,6 +333,27 @@ async function findPendingExpectedCaseById(expectedCaseId) {
   return expectedCase ? toPendingExpectedCaseItem(expectedCase) : null;
 }
 
+async function findVictimAttendanceContextByBoNumber(boNumber) {
+  const normalizedBoNumber = normalizeBoNumber(boNumber);
+  const store = await readStore();
+  const expectedCase = store.expectedCases
+    .map(normalizeExpectedCaseRecord)
+    .find((item) => item.boNumber === normalizedBoNumber);
+
+  if (!expectedCase) {
+    return null;
+  }
+
+  return {
+    boNumber: expectedCase.boNumber,
+    natureza: expectedCase.natureza,
+    victimName: expectedCase.victimName,
+    victimCpf: expectedCase.victimCpf,
+    victimPhone: expectedCase.victimPhone,
+    victimEmail: null
+  };
+}
+
 async function markPendingCaseAsProcessing(expectedCaseId) {
   const store = await readStore();
   const expectedCase = store.expectedCases.find((item) => Number(item.id) === Number(expectedCaseId));
@@ -417,6 +438,7 @@ module.exports = {
   listInvolvedPeopleSource,
   findPendingExpectedCaseByBoNumber,
   findPendingExpectedCaseById,
+  findVictimAttendanceContextByBoNumber,
   markPendingCaseAsProcessing,
   linkPairToExpectedCase
 };

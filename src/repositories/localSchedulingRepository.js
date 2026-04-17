@@ -122,6 +122,33 @@ async function listAvailabilityByDate(date) {
     }));
 }
 
+async function listAvailabilityDatesInRange({ startDate, endDate }) {
+  const store = await readStore();
+  const startMs = new Date(`${String(startDate || '').trim()}T00:00:00`).getTime();
+  const endMs = new Date(`${String(endDate || '').trim()}T23:59:59`).getTime();
+
+  const dates = new Set();
+
+  for (const slot of store.slots) {
+    const slotTime = new Date(slot.startsAt).getTime();
+    if (Number.isNaN(slotTime)) {
+      continue;
+    }
+
+    if (slot.status !== 'DISPONIVEL') {
+      continue;
+    }
+
+    if (slotTime < startMs || slotTime > endMs) {
+      continue;
+    }
+
+    dates.add(buildDateKey(slot.startsAt));
+  }
+
+  return [...dates].sort();
+}
+
 async function findAvailabilitySlotById(slotId) {
   const store = await readStore();
   const slot = store.slots.find((item) => Number(item.id) === Number(slotId));
@@ -166,6 +193,7 @@ async function updateSchedulingSettings({ victimAuthorGapHours, authorSummonsMax
 module.exports = {
   createAvailabilitySlot,
   listAvailabilityByDate,
+  listAvailabilityDatesInRange,
   findAvailabilitySlotById,
   listAppointmentsByCaseAndRoles,
   findLatestSummonsDeadlineByCaseAndPersonType,
