@@ -62,6 +62,7 @@ async function deliverOtp({ phone, channel, code }) {
   if (channel === 'whatsapp') {
     return whatsappClient.sendTemplateMessage({
       to: phone,
+	  phone,
       channel: 'whatsapp',
       template: env.whatsapp.otpTemplateName,
       variables: {

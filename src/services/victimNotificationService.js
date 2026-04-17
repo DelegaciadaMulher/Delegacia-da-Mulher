@@ -12,6 +12,7 @@ async function sendDirectMessage({ to, message, context }) {
   try {
     await whatsappClient.sendTemplateMessage({
       to,
+	  phone: to,
       channel: 'whatsapp',
       template: env.whatsapp.victimNotificationTemplateName,
       variables: {

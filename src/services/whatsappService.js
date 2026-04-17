@@ -73,15 +73,15 @@ async function sendSummonsMessage(payload) {
   const link = buildSummonsLink(input.token);
 
   const body = {
-    // to: phone,
-    // channel: 'whatsapp',
-    // template: templateName,
-    // variables: {
-    //   nome: summons.personName,
-    //   tipo: summons.personType,
-    //   texto: summons.summonsText,
-    //   link
-    // },
+    to: phone,
+    channel: 'whatsapp',
+    template: templateName,
+    variables: {
+      nome: summons.personName,
+      tipo: summons.personType,
+      texto: summons.summonsText,
+      link
+    },
 	phone,
     message: `${summons.summonsText} Acesse: ${link}`
   };
