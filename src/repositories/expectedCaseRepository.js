@@ -1,5 +1,16 @@
 const pool = require('../config/database');
 
+const EXPECTED_CASE_TEXT_LIMIT = 200;
+
+function clampExpectedCaseText(value) {
+  const normalized = value == null ? '' : String(value).trim();
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized.slice(0, EXPECTED_CASE_TEXT_LIMIT).trim() || null;
+}
+
 async function createExpectedCaseFromBo({ dailyImportId, periodStart, boBook }) {
   const query = `
     INSERT INTO expected_cases (
@@ -30,9 +41,9 @@ async function createExpectedCaseFromBo({ dailyImportId, periodStart, boBook }) 
     dailyImportId,
     periodStart.toISOString().slice(0, 10),
     boBook.boNumber,
-    boBook.natureza,
-    boBook.victim,
-    boBook.author
+    clampExpectedCaseText(boBook.natureza),
+    clampExpectedCaseText(boBook.victim),
+    clampExpectedCaseText(boBook.author)
   ];
 
   const { rows } = await pool.query(query, values);

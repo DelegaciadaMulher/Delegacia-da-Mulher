@@ -53,7 +53,34 @@ async function createImportWithPeriod({ sourceName, periodStart, periodEnd, note
   return rows[0];
 }
 
+async function getImportHistory(limit = 30) {
+  const safeLimit = Number.isInteger(Number(limit)) && Number(limit) > 0
+    ? Number(limit)
+    : 30;
+
+  const query = `
+    SELECT
+      id,
+      source_name AS "sourceName",
+      period_start AS "periodStart",
+      period_end AS "periodEnd",
+      created_at AS "createdAt"
+    FROM daily_imports
+    WHERE period_start IS NOT NULL
+      AND period_end IS NOT NULL
+    ORDER BY COALESCE(created_at, period_end) DESC, id DESC
+    LIMIT $1
+  `;
+
+  const { rows } = await pool.query(query, [safeLimit]);
+  return {
+    total: rows.length,
+    items: rows
+  };
+}
+
 module.exports = {
   getLastImportedPeriod,
-  createImportWithPeriod
+  createImportWithPeriod,
+  getImportHistory
 };

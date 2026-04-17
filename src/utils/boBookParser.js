@@ -128,6 +128,70 @@ function normalizeFlagrante(value) {
   return normalized;
 }
 
+function isLikelyReportNoise(value) {
+  const line = String(value || '').toUpperCase();
+  return line.includes('FLAGRANTES:')
+    || line.includes('RESUMO')
+    || line.includes('PAGINA ')
+    || line.includes('POLICIA CIVIL')
+    || line.includes('SECRETARIA DE SEGURANCA')
+    || line.includes('DEINTER')
+    || line.includes('DOCUMENTO ASSINADO')
+    || line.includes('B.O. AUTORIA')
+    || line.includes('B.O. ARMAS APREENDIDAS')
+    || line.includes('B.O. VALORES APREENDIDOS')
+    || line.includes('B.O. ENTORPECENTES APREENDIDOS')
+    || line.includes('B.O. OBJETOS APREENDIDOS');
+}
+
+function removeReportArtifacts(value, options = {}) {
+  const { personField = false } = options;
+  let normalized = sanitizeValue(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  const original = normalized;
+  const cutPatterns = [
+    /\bFLAGRANTES?:.*$/i,
+    /\bRESUMO\b.*$/i,
+    /\bP[AÁ]GINA\s+\d+.*$/i,
+    /\bPOL[ÍI]CIA CIVIL\b.*$/i,
+    /\bSECRETARIA DE SEGURAN[ÇC]A\b.*$/i,
+    /\bDEINTER\b.*$/i,
+    /\bDOCUMENTO ASSINADO\b.*$/i,
+    /\bB\.O\.\s+AUTORIA\b.*$/i,
+    /\bB\.O\.\s+ARMAS APREENDIDAS\b.*$/i,
+    /\bB\.O\.\s+VALORES APREENDIDOS\b.*$/i,
+    /\bB\.O\.\s+ENTORPECENTES APREENDIDOS\b.*$/i,
+    /\bB\.O\.\s+OBJETOS APREENDIDOS\b.*$/i
+  ];
+
+  if (personField) {
+    cutPatterns.unshift(/\d{2}\s*D\.P\..*$/i);
+    cutPatterns.unshift(/\bDEL\.?\s*POL\.?\b.*$/i);
+    cutPatterns.unshift(/\bDEL\.SEC\..*$/i);
+    cutPatterns.unshift(/\bDELEG\w*\b.*$/i);
+    cutPatterns.unshift(/\bDDM\s+SAO\s+JOSE\b.*$/i);
+    cutPatterns.unshift(/\bOF[ÍI]CIOS\s+EXPEDIDOS\b.*$/i);
+    cutPatterns.unshift(/\bCUSTODIADOS\b.*$/i);
+    cutPatterns.unshift(/\bDETIDOS\b.*$/i);
+    cutPatterns.unshift(/\bENCAMINHADO\b.*$/i);
+    cutPatterns.unshift(/\bAV\.\s+.*$/i);
+  }
+
+  for (const pattern of cutPatterns) {
+    normalized = normalized.replace(pattern, '').trim();
+  }
+
+  if (personField && isLikelyReportNoise(original)) {
+    return null;
+  }
+
+  return sanitizeValue(normalized);
+}
+
 function isLikelyLocalLine(value) {
   const line = String(value || '').toUpperCase();
   return /(D\.P\.|DEL\.?\s*POL\.?|DELEG|S\.J\.|CAMPOS|STA\.?BRANCA|SAO JOSE)/.test(line);
@@ -228,24 +292,26 @@ function parseBoTableEntries(rawText) {
     const flagrante = normalizeFlagrante(flaggedMatch ? flaggedMatch[1] : null);
     const firstTail = (flaggedMatch ? flaggedMatch[2] : remainder).replace(/([a-zà-ÿ0-9\)])([A-ZÁÉÍÓÚÂÊÔÃÕÇ])/g, '$1 $2');
 
-    const trailingLines = chunk.slice(1);
+    const trailingLines = chunk.slice(1).filter((line) => !isLikelyReportNoise(line));
     const localLines = [];
     while (trailingLines.length && isLikelyLocalLine(trailingLines[trailingLines.length - 1])) {
       localLines.unshift(trailingLines.pop());
     }
 
-    const local = sanitizeValue(localLines.join(' '));
+    const local = removeReportArtifacts(localLines.join(' '));
 
-    let natureza = sanitizeValue(firstTail);
+    let natureza = removeReportArtifacts(firstTail);
     let firstVictimHint = null;
     const natureAndNameMatch = firstTail.match(/^(.+?)\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ]{2,}(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{2,})+.*)$/);
     if (natureAndNameMatch) {
-      natureza = sanitizeValue(natureAndNameMatch[1]);
-      firstVictimHint = sanitizeValue(natureAndNameMatch[2]);
+      natureza = removeReportArtifacts(natureAndNameMatch[1]);
+      firstVictimHint = removeReportArtifacts(natureAndNameMatch[2], { personField: true });
     }
 
     const namesSource = [firstVictimHint, ...trailingLines].filter((line) => Boolean(line));
-    const { victim, author } = splitNamesFromLines(namesSource);
+    const splitNames = splitNamesFromLines(namesSource);
+    const victim = removeReportArtifacts(splitNames.victim, { personField: true });
+    const author = removeReportArtifacts(splitNames.author, { personField: true });
 
     seen.add(boNumber);
     entries.push({
@@ -302,9 +368,9 @@ function parseBoBookContent(rawText) {
   return {
     boNumber,
     flagrante: null,
-    natureza,
-    victim,
-    author,
+    natureza: removeReportArtifacts(natureza),
+    victim: removeReportArtifacts(victim, { personField: true }),
+    author: removeReportArtifacts(author, { personField: true }),
     local: null,
     victimCpf,
     authorCpf

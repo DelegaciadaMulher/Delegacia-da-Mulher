@@ -112,6 +112,142 @@ function readImportHistory() {
   }
 }
 
+function writeImportHistory(history) {
+  localStorage.setItem('boImportHistory', JSON.stringify((history || []).slice(0, 30)));
+}
+
+function toIsoOrNull(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function buildPeriodLabel(startIso, endIso) {
+  const start = toIsoOrNull(startIso);
+  const end = toIsoOrNull(endIso);
+
+  if (!start || !end) {
+    return null;
+  }
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+  const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+  return `${dateFormatter.format(startDate)} às ${timeFormatter.format(startDate)} até ${dateFormatter.format(endDate)} às ${timeFormatter.format(endDate)}`;
+}
+
+function normalizeImportHistoryEntry(entry) {
+  const periodIso = entry && entry.period && entry.period.iso ? entry.period.iso : {};
+  const start = toIsoOrNull(periodIso.start);
+  const end = toIsoOrNull(periodIso.end);
+
+  return {
+    importedAt: toIsoOrNull(entry && entry.importedAt),
+    period: {
+      raw: entry && entry.period && entry.period.raw ? entry.period.raw : buildPeriodLabel(start, end),
+      iso: {
+        start,
+        end
+      }
+    },
+    file: {
+      originalName: entry && entry.file && entry.file.originalName ? entry.file.originalName : null,
+      savedName: entry && entry.file && entry.file.savedName ? entry.file.savedName : null
+    },
+    uploadedBy: entry && entry.uploadedBy ? entry.uploadedBy : null
+  };
+}
+
+function buildHistoryEntryKey(entry) {
+  const normalized = normalizeImportHistoryEntry(entry);
+  return [
+    normalized.file.originalName || '',
+    normalized.period.iso.start || '',
+    normalized.period.iso.end || ''
+  ].join('|');
+}
+
+function mergeImportHistories(primaryHistory, secondaryHistory) {
+  const merged = new Map();
+
+  for (const item of Array.isArray(primaryHistory) ? primaryHistory : []) {
+    const normalized = normalizeImportHistoryEntry(item);
+    merged.set(buildHistoryEntryKey(normalized), normalized);
+  }
+
+  for (const item of Array.isArray(secondaryHistory) ? secondaryHistory : []) {
+    const normalized = normalizeImportHistoryEntry(item);
+    const key = buildHistoryEntryKey(normalized);
+    const existing = merged.get(key);
+
+    if (!existing) {
+      merged.set(key, normalized);
+      continue;
+    }
+
+    merged.set(key, {
+      ...existing,
+      importedAt: existing.importedAt || normalized.importedAt,
+      file: {
+        originalName: existing.file.originalName || normalized.file.originalName,
+        savedName: existing.file.savedName || normalized.file.savedName
+      },
+      uploadedBy: existing.uploadedBy || normalized.uploadedBy,
+      period: {
+        raw: existing.period.raw || normalized.period.raw,
+        iso: {
+          start: existing.period.iso.start || normalized.period.iso.start,
+          end: existing.period.iso.end || normalized.period.iso.end
+        }
+      }
+    });
+  }
+
+  return [...merged.values()]
+    .sort((left, right) => new Date(right.importedAt || 0).getTime() - new Date(left.importedAt || 0).getTime())
+    .slice(0, 30);
+}
+
+async function fetchImportHistory() {
+  const token = localStorage.getItem('adminAccessToken');
+  if (!token) {
+    window.location.href = '/admin';
+    return [];
+  }
+
+  const response = await fetch('/api/admin/dashboard/import-history', {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('adminAccessToken');
+    window.location.href = '/admin';
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error('Erro ao carregar historico de importacoes.');
+  }
+
+  const data = await response.json();
+  return mergeImportHistories(data.items || [], readImportHistory());
+}
+
 function buildOriginalFileLink(file) {
   if (file && file.savedName) {
     return `/uploads/pdfs/${encodeURIComponent(file.savedName)}`;
@@ -120,7 +256,7 @@ function buildOriginalFileLink(file) {
   return null;
 }
 
-function renderHistory() {
+async function renderHistory() {
   const token = localStorage.getItem('adminAccessToken');
   if (!token) {
     window.location.href = '/admin';
@@ -128,7 +264,14 @@ function renderHistory() {
   }
 
   const historyList = document.getElementById('historyList');
-  const history = readImportHistory();
+  let history = [];
+
+  try {
+    history = await fetchImportHistory();
+    writeImportHistory(history);
+  } catch (error) {
+    history = readImportHistory();
+  }
 
   if (!history.length) {
     historyList.innerHTML = '<p class="muted">Sem histórico de importações.</p>';
@@ -141,6 +284,9 @@ function renderHistory() {
       const file = entry.file;
       const uploadedBy = entry.uploadedBy || null;
       const fileLink = buildOriginalFileLink(file);
+      const periodLabel = period && period.raw
+        ? period.raw
+        : buildPeriodLabel(period && period.iso ? period.iso.start : null, period && period.iso ? period.iso.end : null);
 
       let allDaysHtml = '<p class="muted">Período indisponível.</p>';
       if (period && period.iso && period.iso.start && period.iso.end) {
@@ -159,7 +305,7 @@ function renderHistory() {
             ${fileLink ? ` | <a class="history-link" href="${fileLink}" target="_blank" rel="noopener noreferrer">ver arquivo original</a>` : ''}
           </div>
           <div class="history-file"><strong>Usuário:</strong> ${uploadedBy && uploadedBy.fullName ? uploadedBy.fullName : 'não identificado'}${uploadedBy && uploadedBy.cpf ? ` (CPF ${uploadedBy.cpf})` : ''}</div>
-          <div class="history-file"><strong>Período:</strong> ${period && period.raw ? period.raw : '-'}</div>
+          <div class="history-file"><strong>Período:</strong> ${periodLabel || '-'}</div>
           <div class="coverage-chart">${allDaysHtml}</div>
         </div>
       `;

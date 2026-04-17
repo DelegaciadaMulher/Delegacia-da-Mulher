@@ -1,7 +1,40 @@
 const dashboardRepository = require('../repositories/adminDashboardRepository');
+const dailyImportRepository = require('../repositories/dailyImportRepository');
 const env = require('../config/env');
 const localAuthRepository = require('../repositories/localAuthRepository');
 const localExpectedCaseRepository = require('../repositories/localExpectedCaseRepository');
+
+function toIsoOrNull(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function mapImportHistoryItem(item) {
+  return {
+    id: item.id,
+    importedAt: toIsoOrNull(item.createdAt) || toIsoOrNull(item.updatedAt),
+    file: {
+      originalName: item.sourceName || null,
+      savedName: null
+    },
+    uploadedBy: null,
+    period: {
+      raw: null,
+      iso: {
+        start: toIsoOrNull(item.periodStart),
+        end: toIsoOrNull(item.periodEnd)
+      }
+    }
+  };
+}
+
+function shouldUseLocalSimulation() {
+  return env.auth.devMode;
+}
 
 async function buildDevDashboardOverview() {
   const [pendingRegistrationsResult, pendingExpectedCasesResult, activeUsersResult] = await Promise.allSettled([
@@ -31,6 +64,10 @@ async function buildDevDashboardOverview() {
 }
 
 async function getDashboardOverview() {
+  if (shouldUseLocalSimulation()) {
+    return buildDevDashboardOverview();
+  }
+
   try {
     const [casesOfDay, pending, agendaOfDay, recurrence] = await Promise.all([
       dashboardRepository.getCasesOfDay(),
@@ -56,6 +93,15 @@ async function getDashboardOverview() {
 }
 
 async function getPendingRegistrationRequests() {
+  if (shouldUseLocalSimulation()) {
+    const result = await localAuthRepository.listPendingRegistrations();
+    return {
+      mocked: true,
+      total: result.total,
+      items: result.items
+    };
+  }
+
   try {
     return await dashboardRepository.getPendingRegistrationRequests();
   } catch (error) {
@@ -73,6 +119,10 @@ async function getPendingRegistrationRequests() {
 }
 
 async function approveRegistrationRequest(userId) {
+  if (shouldUseLocalSimulation()) {
+    return localAuthRepository.approveRegistration(userId);
+  }
+
   try {
     return await dashboardRepository.approveUserRegistration(userId);
   } catch (error) {
@@ -85,6 +135,16 @@ async function approveRegistrationRequest(userId) {
 }
 
 async function getPendingCasesList() {
+  if (shouldUseLocalSimulation()) {
+    const result = await localExpectedCaseRepository.listPendingExpectedCases();
+
+    return {
+      mocked: true,
+      total: result.total,
+      items: result.items
+    };
+  }
+
   try {
     return await dashboardRepository.getPendingExpectedCases();
   } catch (error) {
@@ -103,6 +163,15 @@ async function getPendingCasesList() {
 }
 
 async function getUsersList() {
+  if (shouldUseLocalSimulation()) {
+    const result = await localAuthRepository.listActiveUsers();
+    return {
+      mocked: true,
+      total: result.total,
+      items: result.items
+    };
+  }
+
   try {
     return await dashboardRepository.getActiveUsers();
   } catch (error) {
@@ -119,10 +188,41 @@ async function getUsersList() {
   }
 }
 
+async function getImportHistory() {
+  if (shouldUseLocalSimulation()) {
+    const result = await localExpectedCaseRepository.listImportHistory();
+    return {
+      mocked: true,
+      total: result.total,
+      items: result.items.map(mapImportHistoryItem)
+    };
+  }
+
+  try {
+    const result = await dailyImportRepository.getImportHistory();
+    return {
+      total: result.total,
+      items: result.items.map(mapImportHistoryItem)
+    };
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    const result = await localExpectedCaseRepository.listImportHistory();
+    return {
+      mocked: true,
+      total: result.total,
+      items: result.items.map(mapImportHistoryItem)
+    };
+  }
+}
+
 module.exports = {
   getDashboardOverview,
   getPendingCasesList,
   getPendingRegistrationRequests,
   approveRegistrationRequest,
-  getUsersList
+  getUsersList,
+  getImportHistory
 };

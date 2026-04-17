@@ -88,6 +88,42 @@ async function processPdfUpload(file) {
   let expectedCases = [];
   let persistenceMode = 'database';
 
+  if (env.auth.devMode) {
+    persistenceMode = 'local_dev_store';
+    createdImport = {
+      id: 0,
+      importDate: period.start.toISOString().slice(0, 10),
+      sourceName: file.originalname,
+      periodStart: period.start.toISOString(),
+      periodEnd: period.end.toISOString(),
+      createdAt: new Date().toISOString(),
+      mocked: true
+    };
+    expectedCases = await buildLocalExpectedCasesFallback({ file, period, boEntries });
+
+    return {
+      file: {
+        originalName: file.originalname,
+        savedName: file.filename,
+        savedPath: file.path,
+        size: file.size
+      },
+      period,
+      importValidation: {
+        status: 'first_import',
+        lastImportedPeriod: null
+      },
+      persistenceMode,
+      dailyImport: createdImport,
+      boBook,
+      boEntries,
+      totalBosExtracted: boEntries.length,
+      pendingToAttachFiles: expectedCases.length,
+      expectedCases,
+      extractedTextPreview: text.slice(0, 1200)
+    };
+  }
+
   try {
     lastImport = await dailyImportRepository.getLastImportedPeriod();
     validatePeriodContinuity(period, lastImport);

@@ -432,6 +432,144 @@ function writeImportHistory(history) {
   localStorage.setItem('boImportHistory', JSON.stringify(history.slice(0, 30)));
 }
 
+function toIsoOrNull(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function buildPeriodLabel(startIso, endIso) {
+  const start = toIsoOrNull(startIso);
+  const end = toIsoOrNull(endIso);
+
+  if (!start || !end) {
+    return null;
+  }
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+  const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+  return `${dateFormatter.format(startDate)} às ${timeFormatter.format(startDate)} até ${dateFormatter.format(endDate)} às ${timeFormatter.format(endDate)}`;
+}
+
+function normalizeImportHistoryEntry(entry) {
+  const periodIso = entry && entry.period && entry.period.iso ? entry.period.iso : {};
+  const start = toIsoOrNull(periodIso.start);
+  const end = toIsoOrNull(periodIso.end);
+
+  return {
+    importedAt: toIsoOrNull(entry && entry.importedAt),
+    period: {
+      raw: entry && entry.period && entry.period.raw ? entry.period.raw : buildPeriodLabel(start, end),
+      iso: {
+        start,
+        end
+      }
+    },
+    file: {
+      originalName: entry && entry.file && entry.file.originalName ? entry.file.originalName : null,
+      savedName: entry && entry.file && entry.file.savedName ? entry.file.savedName : null
+    },
+    uploadedBy: entry && entry.uploadedBy ? entry.uploadedBy : null
+  };
+}
+
+function buildHistoryEntryKey(entry) {
+  const normalized = normalizeImportHistoryEntry(entry);
+  return [
+    normalized.file.originalName || '',
+    normalized.period.iso.start || '',
+    normalized.period.iso.end || ''
+  ].join('|');
+}
+
+function mergeImportHistories(primaryHistory, secondaryHistory) {
+  const merged = new Map();
+
+  for (const item of Array.isArray(primaryHistory) ? primaryHistory : []) {
+    const normalized = normalizeImportHistoryEntry(item);
+    merged.set(buildHistoryEntryKey(normalized), normalized);
+  }
+
+  for (const item of Array.isArray(secondaryHistory) ? secondaryHistory : []) {
+    const normalized = normalizeImportHistoryEntry(item);
+    const key = buildHistoryEntryKey(normalized);
+    const existing = merged.get(key);
+
+    if (!existing) {
+      merged.set(key, normalized);
+      continue;
+    }
+
+    merged.set(key, {
+      ...existing,
+      importedAt: existing.importedAt || normalized.importedAt,
+      file: {
+        originalName: existing.file.originalName || normalized.file.originalName,
+        savedName: existing.file.savedName || normalized.file.savedName
+      },
+      uploadedBy: existing.uploadedBy || normalized.uploadedBy,
+      period: {
+        raw: existing.period.raw || normalized.period.raw,
+        iso: {
+          start: existing.period.iso.start || normalized.period.iso.start,
+          end: existing.period.iso.end || normalized.period.iso.end
+        }
+      }
+    });
+  }
+
+  return [...merged.values()]
+    .sort((left, right) => new Date(right.importedAt || 0).getTime() - new Date(left.importedAt || 0).getTime())
+    .slice(0, 30);
+}
+
+async function fetchImportHistory() {
+  const token = localStorage.getItem('adminAccessToken');
+  if (!token) {
+    return readImportHistory();
+  }
+
+  const response = await fetch('/api/admin/dashboard/import-history', {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('adminAccessToken');
+    window.location.href = '/admin';
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error('Erro ao carregar historico de importacoes.');
+  }
+
+  const data = await response.json();
+  return mergeImportHistories(data.items || [], readImportHistory());
+}
+
+async function loadImportHistory() {
+  const history = await fetchImportHistory();
+  writeImportHistory(history);
+  renderPeriodCoverage(history);
+  return history;
+}
+
 function readAdminUser() {
   try {
     const raw = localStorage.getItem('adminUser');
@@ -549,7 +687,11 @@ async function uploadBoPdf() {
 
   if (data && data.period) {
     appendImportHistoryEntry(data);
-    renderPeriodCoverage(readImportHistory());
+    try {
+      await loadImportHistory();
+    } catch (error) {
+      renderPeriodCoverage(readImportHistory());
+    }
   }
 
   try {
@@ -718,11 +860,13 @@ if (cachedDashboardSummary) {
   }));
 }
 
-try {
-  renderPeriodCoverage(readImportHistory());
-} catch (error) {
-  renderPeriodCoverage([]);
-}
+loadImportHistory().catch(() => {
+  try {
+    renderPeriodCoverage(readImportHistory());
+  } catch (error) {
+    renderPeriodCoverage([]);
+  }
+});
 
 loadDashboard().catch((error) => {
   alert(error.message);

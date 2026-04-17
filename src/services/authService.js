@@ -316,6 +316,22 @@ async function register(payload) {
     throw error;
   }
 
+  if (env.auth.devMode) {
+    const user = await localAuthRepository.createPendingRegistration({
+      fullName,
+      cpf,
+      email,
+      phone,
+      role
+    });
+
+    return {
+      userId: user.id,
+      message: 'Solicitacao de cadastro enviada no banco local de simulacao. Aguarde aprovacao do administrador.',
+      persistenceMode: 'local_dev_store'
+    };
+  }
+
   try {
     const existingUser = await authRepository.findUserByCpf(cpf);
     if (existingUser) {

@@ -2,6 +2,16 @@ const fs = require('fs/promises');
 const path = require('path');
 
 const STORE_PATH = path.resolve(process.cwd(), 'database', 'dev-data', 'local-expected-cases.json');
+const EXPECTED_CASE_TEXT_LIMIT = 200;
+
+function clampExpectedCaseText(value) {
+  const normalized = value == null ? '' : String(value).trim();
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized.slice(0, EXPECTED_CASE_TEXT_LIMIT).trim() || null;
+}
 
 function createDefaultStore() {
   return {
@@ -55,9 +65,9 @@ function normalizeExpectedCaseRecord(expectedCase) {
     status: String(expectedCase.status || 'PENDENTE').trim().toUpperCase(),
     boNumber: normalizeBoNumber(expectedCase.boNumber),
     flagrante: expectedCase.flagrante == null ? null : String(expectedCase.flagrante).trim(),
-    natureza: expectedCase.natureza == null ? null : String(expectedCase.natureza).trim(),
-    victimName: expectedCase.victimName == null ? null : String(expectedCase.victimName).trim(),
-    authorName: expectedCase.authorName == null ? null : String(expectedCase.authorName).trim(),
+    natureza: clampExpectedCaseText(expectedCase.natureza),
+    victimName: clampExpectedCaseText(expectedCase.victimName),
+    authorName: clampExpectedCaseText(expectedCase.authorName),
     local: expectedCase.local == null ? null : String(expectedCase.local).trim(),
     victimCpf: expectedCase.victimCpf == null ? null : String(expectedCase.victimCpf).trim(),
     authorCpf: expectedCase.authorCpf == null ? null : String(expectedCase.authorCpf).trim(),
@@ -87,6 +97,17 @@ function sortByNewest(left, right) {
   const leftDate = new Date(left.updatedAt || left.createdAt || 0).getTime();
   const rightDate = new Date(right.updatedAt || right.createdAt || 0).getTime();
   return rightDate - leftDate;
+}
+
+function toImportHistoryItem(item) {
+  return {
+    id: item.id,
+    sourceName: item.sourceName,
+    periodStart: item.periodStart,
+    periodEnd: item.periodEnd,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
+  };
 }
 
 async function createPendingExpectedCases({ sourceName, periodStart, periodEnd, boEntries }) {
@@ -180,8 +201,63 @@ async function countPendingExpectedCases() {
   return result.total;
 }
 
+async function listImportHistory(limit = 30) {
+  const store = await readStore();
+  const importMap = new Map();
+
+  for (const record of store.expectedCases.map(normalizeExpectedCaseRecord)) {
+    if (!record.periodStart || !record.periodEnd) {
+      continue;
+    }
+
+    const key = [record.sourceName || '', record.periodStart, record.periodEnd].join('|');
+    const existingItem = importMap.get(key);
+    const nextItem = {
+      id: key,
+      sourceName: record.sourceName || null,
+      periodStart: record.periodStart,
+      periodEnd: record.periodEnd,
+      createdAt: existingItem && existingItem.createdAt
+        ? existingItem.createdAt
+        : (record.createdAt || record.updatedAt || null),
+      updatedAt: record.updatedAt || record.createdAt || null
+    };
+
+    if (!existingItem) {
+      importMap.set(key, nextItem);
+      continue;
+    }
+
+    const existingUpdatedMs = new Date(existingItem.updatedAt || existingItem.createdAt || 0).getTime();
+    const nextUpdatedMs = new Date(nextItem.updatedAt || nextItem.createdAt || 0).getTime();
+
+    if (nextUpdatedMs >= existingUpdatedMs) {
+      importMap.set(key, {
+        ...existingItem,
+        ...nextItem,
+        createdAt: existingItem.createdAt || nextItem.createdAt
+      });
+    }
+  }
+
+  const safeLimit = Number.isInteger(Number(limit)) && Number(limit) > 0
+    ? Number(limit)
+    : 30;
+
+  const items = [...importMap.values()]
+    .sort(sortByNewest)
+    .slice(0, safeLimit)
+    .map(toImportHistoryItem);
+
+  return {
+    total: importMap.size,
+    items
+  };
+}
+
 module.exports = {
   createPendingExpectedCases,
   listPendingExpectedCases,
-  countPendingExpectedCases
+  countPendingExpectedCases,
+  listImportHistory
 };

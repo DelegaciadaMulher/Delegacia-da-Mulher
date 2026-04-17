@@ -6,6 +6,7 @@ const router = Router();
 
 router.use(requireSession, requireAdmin);
 router.get('/overview', adminDashboardController.getOverview);
+router.get('/import-history', adminDashboardController.getImportHistory);
 router.get('/users', adminDashboardController.getUsers);
 router.get('/pending-cases', adminDashboardController.getPendingCases);
 router.get('/pending-registrations', adminDashboardController.getPendingRegistrationRequests);

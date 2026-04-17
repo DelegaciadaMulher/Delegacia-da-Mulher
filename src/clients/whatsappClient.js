@@ -5,6 +5,24 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '');
 }
 
+function normalizeMetaCloudPhone(phone) {
+  const digits = normalizePhone(phone);
+
+  if (!digits) {
+    return '';
+  }
+
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    return digits;
+  }
+
+  if (digits.length === 10 || digits.length === 11) {
+    return `55${digits}`;
+  }
+
+  return digits;
+}
+
 function resolveApiUrl() {
   if (env.whatsapp.provider === 'meta-cloud') {
     if (env.whatsapp.apiUrl) {
@@ -35,7 +53,11 @@ function buildHeaders() {
   };
 
   if (env.whatsapp.apiToken) {
-    headers["Client-Token"] = `${env.whatsapp.apiToken}`;
+    if (env.whatsapp.provider === 'meta-cloud') {
+      headers.Authorization = `Bearer ${env.whatsapp.apiToken}`;
+    } else {
+      headers['Client-Token'] = `${env.whatsapp.apiToken}`;
+    }
   }
 
   return headers;
@@ -59,7 +81,7 @@ function buildMetaTemplateComponents(variables) {
 }
 
 function buildMetaCloudPayload(payload) {
-  const to = normalizePhone(payload.to);
+  const to = normalizeMetaCloudPhone(payload.to);
   if (!to) {
     const error = new Error('Telefone de destino invalido para envio no WhatsApp.');
     error.statusCode = 422;
