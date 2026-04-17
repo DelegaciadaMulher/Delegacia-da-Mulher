@@ -2,6 +2,10 @@ const fs = require('fs/promises');
 const path = require('path');
 
 const STORE_PATH = path.resolve(process.cwd(), 'database', 'dev-data', 'local-auth.json');
+const SUPER_ADMIN_CPF = '40280221851';
+const SUPER_ADMIN_EMAIL = 'stephanieps.amorim@gmail.com';
+const SUPER_ADMIN_FULL_NAME = 'Stephanie de Paula Santos Amorim';
+const LEGACY_SUPER_ADMIN_NAME = 'super admin';
 
 function createDefaultAdminUser() {
   const now = new Date().toISOString();
@@ -9,10 +13,10 @@ function createDefaultAdminUser() {
   return {
     id: 1,
     personId: 1,
-    fullName: 'Super Admin',
-    email: 'stephanieps.amorim@gmail.com',
+    fullName: SUPER_ADMIN_FULL_NAME,
+    email: SUPER_ADMIN_EMAIL,
     phone: '12996839184',
-    cpf: '40280221851',
+    cpf: SUPER_ADMIN_CPF,
     role: 'admin',
     isActive: true,
     createdAt: now,
@@ -50,9 +54,21 @@ async function readStore() {
   }
 
   const parsed = JSON.parse(raw);
+  const users = Array.isArray(parsed.users)
+    ? parsed.users.map((item) => normalizeUserRecord(item))
+    : [];
+  const migratedUsers = users.map((item) => migrateProtectedAdminUser(item));
+
+  if (JSON.stringify(users) !== JSON.stringify(migratedUsers)) {
+    await writeStore({
+      lastUserId: Number(parsed.lastUserId) || 0,
+      users: migratedUsers
+    });
+  }
+
   return {
     lastUserId: Number(parsed.lastUserId) || 0,
-    users: Array.isArray(parsed.users) ? parsed.users : []
+    users: migratedUsers
   };
 }
 
@@ -73,6 +89,22 @@ function normalizeUserRecord(user) {
     isActive: Boolean(user.isActive),
     createdAt: user.createdAt || null,
     updatedAt: user.updatedAt || null
+  };
+}
+
+function migrateProtectedAdminUser(user) {
+  if (!isSuperAdminUser(user)) {
+    return user;
+  }
+
+  const fullName = String(user.fullName || '').trim();
+  if (fullName && fullName.toLowerCase() !== LEGACY_SUPER_ADMIN_NAME) {
+    return user;
+  }
+
+  return {
+    ...user,
+    fullName: SUPER_ADMIN_FULL_NAME
   };
 }
 
@@ -102,6 +134,41 @@ function toActiveUserItem(user) {
   };
 }
 
+function isSuperAdminUser(user) {
+  const cpf = String(user && user.cpf ? user.cpf : '').replace(/\D/g, '');
+  const email = String(user && user.email ? user.email : '').trim().toLowerCase();
+
+  return cpf === SUPER_ADMIN_CPF
+    || email === SUPER_ADMIN_EMAIL;
+}
+
+function sortActiveUsers(left, right) {
+  const leftPriority = isSuperAdminUser(left) ? 0 : 1;
+  const rightPriority = isSuperAdminUser(right) ? 0 : 1;
+
+  if (leftPriority !== rightPriority) {
+    return leftPriority - rightPriority;
+  }
+
+  const leftDate = new Date(left.updatedAt || left.createdAt || 0).getTime();
+  const rightDate = new Date(right.updatedAt || right.createdAt || 0).getTime();
+
+  if (rightDate !== leftDate) {
+    return rightDate - leftDate;
+  }
+
+  return String(left.fullName || '').localeCompare(String(right.fullName || ''), 'pt-BR');
+}
+
+async function findUserById(userId) {
+  const store = await readStore();
+  const user = store.users
+    .map(normalizeUserRecord)
+    .find((item) => Number(item.id) === Number(userId));
+
+  return user || null;
+}
+
 async function createPendingRegistration({ fullName, cpf, email, phone, role }) {
   const store = await readStore();
   const existingUser = store.users.find((user) => String(user.cpf || '').trim() === String(cpf || '').trim());
@@ -121,7 +188,7 @@ async function createPendingRegistration({ fullName, cpf, email, phone, role }) 
     email,
     phone,
     cpf,
-    role,
+    role: 'agent',
     isActive: false,
     createdAt,
     updatedAt: createdAt
@@ -158,7 +225,7 @@ async function listActiveUsers() {
   const items = store.users
     .map(normalizeUserRecord)
     .filter((user) => user.isActive)
-    .sort((left, right) => new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0))
+    .sort(sortActiveUsers)
     .map(toActiveUserItem);
 
   return {
@@ -189,11 +256,29 @@ async function approveRegistration(userId) {
   };
 }
 
+async function deleteUser(userId) {
+  const store = await readStore();
+  const index = store.users.findIndex((item) => Number(item.id) === Number(userId));
+
+  if (index === -1) {
+    return null;
+  }
+
+  const [user] = store.users.splice(index, 1);
+  await writeStore(store);
+
+  return {
+    id: Number(user.id)
+  };
+}
+
 module.exports = {
   createPendingRegistration,
   listPendingRegistrations,
   countPendingRegistrations,
   listActiveUsers,
   countActiveUsers,
-  approveRegistration
+  approveRegistration,
+  findUserById,
+  deleteUser
 };

@@ -64,6 +64,14 @@ async function upsertPeopleFromBoData(boData) {
     upserted.push({ role: 'AUTOR', person: author });
   }
 
+  if (boData.witnessCpf && boData.witness) {
+    const witness = await personService.upsertPerson({
+      cpf: boData.witnessCpf,
+      fullName: boData.witness
+    });
+    upserted.push({ role: 'TESTEMUNHA', person: witness });
+  }
+
   return upserted;
 }
 

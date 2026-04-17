@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agenda - Delegacia da Mulher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles/admin-pending.css?v=20260417l" />
+  <link rel="stylesheet" href="/styles/admin-agenda.css?v=20260417r" />
+</head>
+<body>
+  <div class="bg-shape bg-shape-1"></div>
+  <div class="bg-shape bg-shape-2"></div>
+
+  <main class="page">
+    <header class="hero">
+      <div>
+        <p class="tag">Delegacia da Mulher</p>
+        <h1>Agenda</h1>
+        <p class="subtitle">Calendario mensal de agendamentos com navegação por mes e detalhes do dia selecionado.</p>
+      </div>
+      <div class="hero-actions">
+        <a href="/admin/painel" class="icon-btn icon-btn-secondary" aria-label="Voltar ao painel" title="Voltar ao painel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M12 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        </a>
+        <button id="refreshBtn" class="icon-btn icon-btn-primary" type="button" aria-label="Atualizar agenda" title="Atualizar agenda">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M20 4v6h-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="summary-row agenda-summary-row">
+        <div>
+          <strong>Agendamentos no mes:</strong>
+          <span id="agendaMonthCount">0</span>
+        </div>
+        <div>
+          <strong>Dias com agenda:</strong>
+          <span id="agendaDaysCount">0</span>
+        </div>
+        <div>
+          <strong>Selecionado:</strong>
+          <span id="agendaSelectedDateLabel">-</span>
+        </div>
+        <div>
+          <strong>Agendamentos no dia:</strong>
+          <span id="agendaSelectedCount">0</span>
+        </div>
+      </div>
+
+      <div class="agenda-layout">
+        <section class="agenda-calendar-shell" aria-label="Calendario mensal da agenda">
+          <div class="agenda-calendar-toolbar">
+            <button id="prevMonthBtn" class="month-nav-btn" type="button" aria-label="Mes anterior">&lt;</button>
+            <div class="agenda-month-copy">
+              <div class="eyebrow">Calendario</div>
+              <strong id="agendaMonthLabel">-</strong>
+            </div>
+            <button id="nextMonthBtn" class="month-nav-btn" type="button" aria-label="Proximo mes">&gt;</button>
+          </div>
+
+          <div class="agenda-weekdays" aria-hidden="true">
+            <span>Dom</span>
+            <span>Seg</span>
+            <span>Ter</span>
+            <span>Qua</span>
+            <span>Qui</span>
+            <span>Sex</span>
+            <span>Sab</span>
+          </div>
+
+          <div id="agendaCalendarGrid" class="agenda-calendar-grid"></div>
+        </section>
+
+        <section class="agenda-day-shell" aria-label="Detalhes do dia selecionado">
+          <div class="agenda-day-header">
+            <div>
+              <div class="eyebrow">Dia selecionado</div>
+              <strong id="agendaDayTitle">-</strong>
+            </div>
+            <span id="agendaDayBadge" class="agenda-day-badge">0 agendamentos</span>
+          </div>
+
+          <div id="agendaList" class="list agenda-list"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel agenda-availability-panel">
+      <div class="gap-rule-shell">
+        <div>
+          <h2>Regras do agendamento do infrator</h2>
+          <p class="muted">Defina a distância mínima entre vítima e infrator e também quantos dias, no máximo, o infrator pode agendar após a intimação. Use 0 horas para desabilitar a trava entre vítima e infrator.</p>
+        </div>
+
+        <form id="gapRuleForm" class="gap-rule-form">
+          <label class="gap-rule-field" for="gapRuleHoursInput">
+            <span>Diferença mínima em horas</span>
+            <input id="gapRuleHoursInput" type="number" min="0" max="720" step="1" value="0" required />
+          </label>
+          <label class="gap-rule-field" for="authorSummonsMaxDaysInput">
+            <span>Prazo máximo após intimação</span>
+            <input id="authorSummonsMaxDaysInput" type="number" min="0" max="365" step="1" value="3" required />
+          </label>
+          <button id="gapRuleSubmitBtn" class="refresh-btn gap-rule-submit-btn" type="submit">Salvar regra</button>
+        </form>
+
+        <div class="summary-row gap-rule-summary-row">
+          <div>
+            <strong>Diferença atual:</strong>
+            <span id="gapRuleSummary">0 horas</span>
+          </div>
+          <div>
+            <strong>Prazo atual do infrator:</strong>
+            <span id="authorSummonsMaxDaysSummary">3 dias</span>
+          </div>
+        </div>
+
+        <p id="gapRuleStatus" class="muted"></p>
+      </div>
+
+      <div class="availability-heading">
+        <div>
+          <h2>Disponibilidade para agendamento</h2>
+          <p class="muted">Escolha a data, defina a faixa de horário e libere os intervalos disponíveis para novos agendamentos.</p>
+        </div>
+      </div>
+
+      <div class="summary-row availability-summary-row">
+        <div>
+          <strong>Data escolhida:</strong>
+          <span id="availabilityDateLabel">-</span>
+        </div>
+        <div>
+          <strong>Horários disponíveis:</strong>
+          <span id="availabilityCount">0</span>
+        </div>
+      </div>
+
+      <form id="availabilityForm" class="availability-form">
+        <label class="availability-field" for="availabilityDateInput">
+          <span>Data</span>
+          <input id="availabilityDateInput" type="date" required />
+        </label>
+
+        <label class="availability-field" for="availabilityStartTimeInput">
+          <span>Início</span>
+          <input id="availabilityStartTimeInput" type="time" value="08:00" required />
+        </label>
+
+        <label class="availability-field" for="availabilityEndTimeInput">
+          <span>Fim</span>
+          <input id="availabilityEndTimeInput" type="time" value="17:00" required />
+        </label>
+
+        <label class="availability-field" for="availabilityIntervalInput">
+          <span>Intervalo</span>
+          <input id="availabilityIntervalInput" type="number" min="10" max="240" step="10" value="30" required />
+        </label>
+
+        <button id="availabilitySubmitBtn" class="refresh-btn availability-submit-btn" type="submit">Liberar horários</button>
+      </form>
+
+      <p id="availabilityStatus" class="muted"></p>
+      <div id="availabilityList" class="list availability-list"></div>
+    </section>
+  </main>
+
+  <script src="/scripts/admin-agenda.js?v=20260417r"></script>
+  <script src="/scripts/admin-shell.js"></script>
+</body>
+</html>

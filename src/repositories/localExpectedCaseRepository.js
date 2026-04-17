@@ -58,6 +58,15 @@ function normalizeBoNumber(value) {
   return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
 }
 
+function pickExistingOrIncoming(existingValue, incomingValue) {
+  const existing = existingValue == null ? '' : String(existingValue).trim();
+  if (existing) {
+    return existingValue;
+  }
+
+  return incomingValue;
+}
+
 function normalizeExpectedCaseRecord(expectedCase) {
   return {
     id: Number(expectedCase.id),
@@ -71,6 +80,11 @@ function normalizeExpectedCaseRecord(expectedCase) {
     local: expectedCase.local == null ? null : String(expectedCase.local).trim(),
     victimCpf: expectedCase.victimCpf == null ? null : String(expectedCase.victimCpf).trim(),
     authorCpf: expectedCase.authorCpf == null ? null : String(expectedCase.authorCpf).trim(),
+    witnessName: clampExpectedCaseText(expectedCase.witnessName),
+    witnessCpf: expectedCase.witnessCpf == null ? null : String(expectedCase.witnessCpf).trim(),
+    witnesses: Array.isArray(expectedCase.witnesses)
+      ? expectedCase.witnesses.map((item) => clampExpectedCaseText(item)).filter(Boolean)
+      : [],
     sourceName: expectedCase.sourceName == null ? null : String(expectedCase.sourceName).trim(),
     savedName: expectedCase.savedName == null ? null : String(expectedCase.savedName).trim(),
     savedPath: expectedCase.savedPath == null ? null : String(expectedCase.savedPath).trim(),
@@ -135,20 +149,22 @@ async function createPendingExpectedCases({ sourceName, periodStart, periodEnd, 
         existingExpectedCase,
         normalizeExpectedCaseRecord({
           ...existingExpectedCase,
-          status: 'PENDENTE',
+          status: existingExpectedCase.status || 'PENDENTE',
           boNumber,
-          flagrante: boEntry.flagrante,
-          natureza: boEntry.natureza,
-          victimName: boEntry.victim,
-          authorName: boEntry.author,
-          local: boEntry.local,
-          victimCpf: boEntry.victimCpf,
-          authorCpf: boEntry.authorCpf,
-          sourceName,
-          savedName: boEntry.savedName,
-          savedPath: boEntry.savedPath,
-          periodStart,
-          periodEnd,
+          flagrante: pickExistingOrIncoming(existingExpectedCase.flagrante, boEntry.flagrante),
+          natureza: pickExistingOrIncoming(existingExpectedCase.natureza, boEntry.natureza),
+          victimName: pickExistingOrIncoming(existingExpectedCase.victimName, boEntry.victim),
+          authorName: pickExistingOrIncoming(existingExpectedCase.authorName, boEntry.author),
+          witnessName: pickExistingOrIncoming(existingExpectedCase.witnessName, boEntry.witness),
+          local: pickExistingOrIncoming(existingExpectedCase.local, boEntry.local),
+          victimCpf: pickExistingOrIncoming(existingExpectedCase.victimCpf, boEntry.victimCpf),
+          authorCpf: pickExistingOrIncoming(existingExpectedCase.authorCpf, boEntry.authorCpf),
+          witnessCpf: pickExistingOrIncoming(existingExpectedCase.witnessCpf, boEntry.witnessCpf),
+          sourceName: pickExistingOrIncoming(existingExpectedCase.sourceName, sourceName),
+          savedName: pickExistingOrIncoming(existingExpectedCase.savedName, boEntry.savedName),
+          savedPath: pickExistingOrIncoming(existingExpectedCase.savedPath, boEntry.savedPath),
+          periodStart: pickExistingOrIncoming(existingExpectedCase.periodStart, periodStart),
+          periodEnd: pickExistingOrIncoming(existingExpectedCase.periodEnd, periodEnd),
           createdAt: existingExpectedCase.createdAt || now,
           updatedAt: now
         })
@@ -168,9 +184,11 @@ async function createPendingExpectedCases({ sourceName, periodStart, periodEnd, 
       natureza: boEntry.natureza,
       victimName: boEntry.victim,
       authorName: boEntry.author,
+      witnessName: boEntry.witness,
       local: boEntry.local,
       victimCpf: boEntry.victimCpf,
       authorCpf: boEntry.authorCpf,
+      witnessCpf: boEntry.witnessCpf,
       sourceName,
       savedName: boEntry.savedName,
       savedPath: boEntry.savedPath,
@@ -207,6 +225,33 @@ async function listPendingExpectedCases() {
 async function countPendingExpectedCases() {
   const result = await listPendingExpectedCases();
   return result.total;
+}
+
+async function listInvolvedPeopleSource() {
+  const store = await readStore();
+  const items = store.expectedCases
+    .map(normalizeExpectedCaseRecord)
+    .filter((expectedCase) => expectedCase.boNumber)
+    .sort(sortByNewest)
+    .map((expectedCase) => ({
+      id: expectedCase.id,
+      boNumber: expectedCase.boNumber,
+      natureza: expectedCase.natureza,
+      victimName: expectedCase.victimName,
+      authorName: expectedCase.authorName,
+      victimCpf: expectedCase.victimCpf,
+      authorCpf: expectedCase.authorCpf,
+      witnessName: expectedCase.witnessName,
+      witnessCpf: expectedCase.witnessCpf,
+      witnesses: expectedCase.witnesses,
+      createdAt: expectedCase.createdAt,
+      updatedAt: expectedCase.updatedAt
+    }));
+
+  return {
+    total: items.length,
+    items
+  };
 }
 
 async function listImportHistory(limit = 30) {
@@ -269,5 +314,6 @@ module.exports = {
   createPendingExpectedCases,
   listPendingExpectedCases,
   countPendingExpectedCases,
-  listImportHistory
+  listImportHistory,
+  listInvolvedPeopleSource
 };

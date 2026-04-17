@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/admin-register.css" />
+  <link rel="stylesheet" href="/styles/admin-register.css?v=20260417d" />
 </head>
 <body>
   <main class="auth-shell">
@@ -28,11 +28,7 @@
         <label for="phone">Telefone</label>
         <input id="phone" placeholder="(00) 90000-0000" required />
 
-        <label for="role">Perfil</label>
-        <select id="role">
-          <option value="agent">Agente</option>
-          <option value="manager">Gestor</option>
-        </select>
+        <p class="status">Todos os novos cadastros sao enviados como agente e dependem de aprovacao do administrador.</p>
 
         <button type="submit">Enviar solicitação</button>
       </form>
@@ -45,6 +41,6 @@
     </section>
   </main>
 
-  <script src="/scripts/admin-register.js"></script>
+  <script src="/scripts/admin-register.js?v=20260417d"></script>
 </body>
 </html>

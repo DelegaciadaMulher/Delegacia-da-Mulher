@@ -102,7 +102,9 @@ async function processPdfUpload(file) {
   const boEntries = parseBoBookEntries(text);
   const boBook = boEntries[0] || parseBoBookContent(text);
   let lastImport = null;
+  let matchingImport = null;
   let createdImport = null;
+  let createdNewImport = false;
   let expectedCases = [];
   let persistenceMode = 'database';
 
@@ -143,15 +145,25 @@ async function processPdfUpload(file) {
   }
 
   try {
-    lastImport = await dailyImportRepository.getLastImportedPeriod();
-    validatePeriodContinuity(period, lastImport);
-
-    createdImport = await dailyImportRepository.createImportWithPeriod({
-      sourceName: file.originalname,
+    matchingImport = await dailyImportRepository.findImportByPeriod({
       periodStart: period.start,
-      periodEnd: period.end,
-      notes: 'Importacao registrada automaticamente via upload de PDF.'
+      periodEnd: period.end
     });
+
+    if (matchingImport) {
+      createdImport = matchingImport;
+    } else {
+      lastImport = await dailyImportRepository.getLastImportedPeriod();
+      validatePeriodContinuity(period, lastImport);
+
+      createdImport = await dailyImportRepository.createImportWithPeriod({
+        sourceName: file.originalname,
+        periodStart: period.start,
+        periodEnd: period.end,
+        notes: 'Importacao registrada automaticamente via upload de PDF.'
+      });
+      createdNewImport = true;
+    }
 
     expectedCases = await Promise.all(
       boEntries.map((entry) =>
@@ -163,7 +175,7 @@ async function processPdfUpload(file) {
       )
     );
   } catch (error) {
-    if (createdImport) {
+    if (createdImport && createdNewImport) {
       await cleanupFailedImport(createdImport);
       createdImport = null;
     }
@@ -199,7 +211,7 @@ async function processPdfUpload(file) {
     },
     period,
     importValidation: {
-      status: lastImport ? 'validated' : 'first_import',
+      status: matchingImport ? 'merged_existing_period' : (lastImport ? 'validated' : 'first_import'),
       lastImportedPeriod: lastImport
         ? {
             id: lastImport.id,

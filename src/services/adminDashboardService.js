@@ -8,6 +8,8 @@ const localAuthRepository = require('../repositories/localAuthRepository');
 const localExpectedCaseRepository = require('../repositories/localExpectedCaseRepository');
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads', 'pdfs');
+const SUPER_ADMIN_FULL_NAME = 'Stephanie de Paula Santos Amorim';
+const SUPER_ADMIN_EMAIL = 'stephanieps.amorim@gmail.com';
 
 function toIsoOrNull(value) {
   if (!value) {
@@ -16,6 +18,334 @@ function toIsoOrNull(value) {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function padNumber(value) {
+  return String(value).padStart(2, '0');
+}
+
+function buildMonthKeyFromDate(date) {
+  return `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}`;
+}
+
+function buildDateKeyFromDate(date) {
+  return `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
+}
+
+function buildDateKeyFromIso(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return buildDateKeyFromDate(parsed);
+}
+
+function parseAgendaMonth(monthValue) {
+  const normalized = String(monthValue || '').trim();
+  const today = new Date();
+
+  if (!normalized) {
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+
+    return {
+      month: buildMonthKeyFromDate(currentMonthStart),
+      monthStart: buildDateKeyFromDate(currentMonthStart),
+      nextMonthStart: buildDateKeyFromDate(nextMonthStart)
+    };
+  }
+
+  const match = normalized.match(/^(\d{4})-(\d{2})$/);
+  if (!match) {
+    const error = new Error('Mes invalido. Use YYYY-MM.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+    const error = new Error('Mes invalido. Use YYYY-MM.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const monthStartDate = new Date(year, monthIndex, 1);
+  const nextMonthStartDate = new Date(year, monthIndex + 1, 1);
+
+  return {
+    month: buildMonthKeyFromDate(monthStartDate),
+    monthStart: buildDateKeyFromDate(monthStartDate),
+    nextMonthStart: buildDateKeyFromDate(nextMonthStartDate)
+  };
+}
+
+function normalizeDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function normalizeLower(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizePersonName(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeComparableText(value) {
+  const normalized = normalizePersonName(value);
+  if (!normalized) {
+    return '';
+  }
+
+  return normalized
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function buildInvolvedPersonKey({ fullName, cpf }) {
+  const digits = normalizeDigits(cpf);
+  if (digits) {
+    return `cpf:${digits}`;
+  }
+
+  const comparableName = normalizeComparableText(fullName);
+  return comparableName ? `name:${comparableName}` : null;
+}
+
+function mapInvolvedRoleLabel(role) {
+  if (role === 'VITIMA') {
+    return 'Vitima';
+  }
+
+  if (role === 'INFRATOR') {
+    return 'Infrator';
+  }
+
+  if (role === 'TESTEMUNHA') {
+    return 'Testemunha';
+  }
+
+  return role;
+}
+
+function splitWitnessNames(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizePersonName(item)).filter(Boolean);
+  }
+
+  const normalized = normalizePersonName(value);
+  if (!normalized) {
+    return [];
+  }
+
+  return normalized
+    .split(/[;|]/)
+    .map((item) => normalizePersonName(item))
+    .filter(Boolean);
+}
+
+function buildInvolvedSourceEntries(item) {
+  const entries = [];
+
+  if (normalizePersonName(item.victimName)) {
+    entries.push({
+      fullName: item.victimName,
+      cpf: item.victimCpf,
+      role: 'VITIMA'
+    });
+  }
+
+  if (normalizePersonName(item.authorName)) {
+    entries.push({
+      fullName: item.authorName,
+      cpf: item.authorCpf,
+      role: 'INFRATOR'
+    });
+  }
+
+  splitWitnessNames(item.witnesses && item.witnesses.length ? item.witnesses : item.witnessName)
+    .forEach((witnessName) => {
+      entries.push({
+        fullName: witnessName,
+        cpf: item.witnessCpf,
+        role: 'TESTEMUNHA'
+      });
+    });
+
+  return entries;
+}
+
+function buildInvolvedPeopleResponse(sourceItems) {
+  const peopleMap = new Map();
+  const roleOrder = ['INFRATOR', 'VITIMA', 'TESTEMUNHA'];
+
+  for (const item of Array.isArray(sourceItems) ? sourceItems : []) {
+    const boNumber = normalizePersonName(item.boNumber).toUpperCase();
+    const natureza = normalizePersonName(item.natureza);
+    const seenAt = toIsoOrNull(item.updatedAt) || toIsoOrNull(item.createdAt);
+
+    for (const entry of buildInvolvedSourceEntries(item)) {
+      const fullName = normalizePersonName(entry.fullName);
+      const cpf = normalizeDigits(entry.cpf) || null;
+      const key = buildInvolvedPersonKey({ fullName, cpf });
+
+      if (!key) {
+        continue;
+      }
+
+      const existing = peopleMap.get(key) || {
+        id: key,
+        fullName,
+        cpf,
+        roles: new Set(),
+        boNumbers: new Set(),
+        naturezas: new Set(),
+        latestSeenAt: seenAt
+      };
+
+      if (!existing.fullName || fullName.length > existing.fullName.length) {
+        existing.fullName = fullName;
+      }
+
+      if (!existing.cpf && cpf) {
+        existing.cpf = cpf;
+      }
+
+      if (entry.role) {
+        existing.roles.add(entry.role);
+      }
+
+      if (boNumber) {
+        existing.boNumbers.add(boNumber);
+      }
+
+      if (natureza) {
+        existing.naturezas.add(natureza);
+      }
+
+      if (!existing.latestSeenAt || (seenAt && new Date(seenAt).getTime() > new Date(existing.latestSeenAt).getTime())) {
+        existing.latestSeenAt = seenAt;
+      }
+
+      peopleMap.set(key, existing);
+    }
+  }
+
+  const items = [...peopleMap.values()]
+    .map((item) => {
+      const boNumbers = [...item.boNumbers].sort((left, right) => right.localeCompare(left, 'pt-BR'));
+      const naturezas = [...item.naturezas].sort((left, right) => left.localeCompare(right, 'pt-BR'));
+      const roles = [...item.roles]
+        .sort((left, right) => roleOrder.indexOf(left) - roleOrder.indexOf(right))
+        .map(mapInvolvedRoleLabel);
+      const boCount = boNumbers.length;
+      const recurrenceCount = boCount > 1 ? boCount - 1 : 0;
+
+      return {
+        id: item.id,
+        fullName: item.fullName,
+        cpf: item.cpf,
+        roles,
+        boNumbers,
+        naturezas,
+        boCount,
+        recurrenceCount,
+        isRecurrent: recurrenceCount > 0,
+        latestSeenAt: item.latestSeenAt || null
+      };
+    })
+    .sort((left, right) => {
+      if (Number(right.isRecurrent) !== Number(left.isRecurrent)) {
+        return Number(right.isRecurrent) - Number(left.isRecurrent);
+      }
+
+      if (right.recurrenceCount !== left.recurrenceCount) {
+        return right.recurrenceCount - left.recurrenceCount;
+      }
+
+      return left.fullName.localeCompare(right.fullName, 'pt-BR');
+    });
+
+  return {
+    total: items.length,
+    recurrentTotal: items.filter((item) => item.isRecurrent).length,
+    items
+  };
+}
+
+function isProtectedUser(user) {
+  if (!user) {
+    return false;
+  }
+
+  const protectedCpf = normalizeDigits(env.auth.devAdminCpf || '40280221851');
+  return normalizeDigits(user.cpf) === protectedCpf
+    || normalizeLower(user.email) === SUPER_ADMIN_EMAIL;
+}
+
+function annotateUserItem(user) {
+  return {
+    ...user,
+    isProtected: isProtectedUser(user)
+  };
+}
+
+function buildAgendaCalendarResponse({ month, items, mocked = false }) {
+  const normalizedItems = Array.isArray(items)
+    ? items
+        .map((item) => ({
+          id: item.id,
+          slotId: item.slotId,
+          status: item.status || null,
+          appointmentType: item.appointmentType || null,
+          personRole: item.personRole || null,
+          startsAt: toIsoOrNull(item.startsAt),
+          endsAt: toIsoOrNull(item.endsAt),
+          personName: normalizePersonName(item.personName) || null,
+          dateKey: buildDateKeyFromIso(item.startsAt)
+        }))
+        .filter((item) => Boolean(item.startsAt) && Boolean(item.dateKey))
+    : [];
+
+  const daysWithAppointments = new Set(normalizedItems.map((item) => item.dateKey)).size;
+  return {
+    ...(mocked ? { mocked: true } : {}),
+    month,
+    total: normalizedItems.length,
+    daysWithAppointments,
+    items: normalizedItems
+  };
+}
+
+function buildDevAgendaCalendar(monthValue) {
+  const parsedMonth = parseAgendaMonth(monthValue);
+  const now = new Date();
+  const currentMonthKey = buildMonthKeyFromDate(now);
+  const shouldIncludeMockItem = parsedMonth.month === currentMonthKey;
+
+  return buildAgendaCalendarResponse({
+    month: parsedMonth.month,
+    mocked: true,
+    items: shouldIncludeMockItem
+      ? [{
+          id: 1,
+          slotId: 1,
+          status: 'AGENDADO',
+          appointmentType: 'ATENDIMENTO',
+          personRole: 'VITIMA',
+          startsAt: now.toISOString(),
+          endsAt: new Date(now.getTime() + 30 * 60000).toISOString(),
+          personName: SUPER_ADMIN_FULL_NAME
+        }]
+      : []
+  });
 }
 
 function sanitizeUploadOriginalName(fileName) {
@@ -106,6 +436,7 @@ async function buildDevDashboardOverview() {
     localExpectedCaseRepository.countPendingExpectedCases(),
     localAuthRepository.countActiveUsers()
   ]);
+  const involvedPeople = await getInvolvedPeopleList();
 
   const pendingRegistrations = pendingRegistrationsResult.status === 'fulfilled'
     ? pendingRegistrationsResult.value
@@ -121,8 +452,9 @@ async function buildDevDashboardOverview() {
     generatedAt: new Date().toISOString(),
     mocked: true,
     casesOfDay: { total: 1, items: [{ protocolNumber: 'DEV-001', title: 'Caso de teste', status: 'open', priority: 'medium', openedAt: new Date().toISOString() }] },
+    involvedPeople: { total: involvedPeople.total },
     pending: { expectedCasesPending, summonsPending: 1, notificationsPending: 1, pendingRegistrations, activeUsers },
-    agendaOfDay: { total: 1, items: [{ personName: 'Super Admin', appointmentType: 'ATENDIMENTO', personRole: 'VITIMA', startsAt: new Date().toISOString(), endsAt: new Date(Date.now() + 30 * 60000).toISOString(), status: 'AGENDADO' }] },
+    agendaOfDay: { total: 1, items: [{ personName: SUPER_ADMIN_FULL_NAME, appointmentType: 'ATENDIMENTO', personRole: 'VITIMA', startsAt: new Date().toISOString(), endsAt: new Date(Date.now() + 30 * 60000).toISOString(), status: 'AGENDADO' }] },
     recurrence: { total: 1, items: [{ personName: 'Autor Exemplo', cpf: '00000000000', caseCount: 2 }] }
   };
 }
@@ -133,6 +465,7 @@ async function getDashboardOverview() {
   }
 
   try {
+    const involvedPeople = await getInvolvedPeopleList();
     const [casesOfDay, pending, agendaOfDay, recurrence] = await Promise.all([
       dashboardRepository.getCasesOfDay(),
       dashboardRepository.getPendingSummary(),
@@ -143,6 +476,7 @@ async function getDashboardOverview() {
     return {
       generatedAt: new Date().toISOString(),
       casesOfDay,
+      involvedPeople: { total: involvedPeople.total },
       pending,
       agendaOfDay,
       recurrence
@@ -226,18 +560,73 @@ async function getPendingCasesList() {
   }
 }
 
+async function getInvolvedPeopleList() {
+  if (shouldUseLocalSimulation()) {
+    const result = await localExpectedCaseRepository.listInvolvedPeopleSource();
+    return {
+      mocked: true,
+      ...buildInvolvedPeopleResponse(result.items)
+    };
+  }
+
+  try {
+    const result = await dashboardRepository.listInvolvedPeopleSource();
+    return buildInvolvedPeopleResponse(result.items);
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    const result = await localExpectedCaseRepository.listInvolvedPeopleSource();
+    return {
+      mocked: true,
+      ...buildInvolvedPeopleResponse(result.items)
+    };
+  }
+}
+
+async function getAgendaCalendar(monthValue) {
+  const parsedMonth = parseAgendaMonth(monthValue);
+
+  if (shouldUseLocalSimulation()) {
+    return buildDevAgendaCalendar(parsedMonth.month);
+  }
+
+  try {
+    const result = await dashboardRepository.listAgendaByMonth({
+      monthStart: parsedMonth.monthStart,
+      nextMonthStart: parsedMonth.nextMonthStart
+    });
+
+    return buildAgendaCalendarResponse({
+      month: parsedMonth.month,
+      items: result.items
+    });
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    return buildDevAgendaCalendar(parsedMonth.month);
+  }
+}
+
 async function getUsersList() {
   if (shouldUseLocalSimulation()) {
     const result = await localAuthRepository.listActiveUsers();
     return {
       mocked: true,
       total: result.total,
-      items: result.items
+      items: result.items.map(annotateUserItem)
     };
   }
 
   try {
-    return await dashboardRepository.getActiveUsers();
+    const result = await dashboardRepository.getActiveUsers();
+    return {
+      total: result.total,
+      items: result.items.map(annotateUserItem)
+    };
   } catch (error) {
     if (!env.auth.devMode) {
       throw error;
@@ -247,8 +636,60 @@ async function getUsersList() {
     return {
       mocked: true,
       total: result.total,
-      items: result.items
+      items: result.items.map(annotateUserItem)
     };
+  }
+}
+
+async function deleteUser(userId) {
+  if (shouldUseLocalSimulation()) {
+    const user = await localAuthRepository.findUserById(userId);
+
+    if (!user || !user.isActive) {
+      return null;
+    }
+
+    if (isProtectedUser(user)) {
+      const error = new Error('Super Admin nao pode ser excluido.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    return localAuthRepository.deleteUser(userId);
+  }
+
+  try {
+    const user = await dashboardRepository.findUserById(userId);
+
+    if (!user || !user.isActive) {
+      return null;
+    }
+
+    if (isProtectedUser(user)) {
+      const error = new Error('Super Admin nao pode ser excluido.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    return dashboardRepository.deleteUser(userId);
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    const user = await localAuthRepository.findUserById(userId);
+
+    if (!user || !user.isActive) {
+      return null;
+    }
+
+    if (isProtectedUser(user)) {
+      const protectedError = new Error('Super Admin nao pode ser excluido.');
+      protectedError.statusCode = 403;
+      throw protectedError;
+    }
+
+    return localAuthRepository.deleteUser(userId);
   }
 }
 
@@ -285,8 +726,11 @@ async function getImportHistory() {
 module.exports = {
   getDashboardOverview,
   getPendingCasesList,
+  getAgendaCalendar,
+  getInvolvedPeopleList,
   getPendingRegistrationRequests,
   approveRegistrationRequest,
   getUsersList,
-  getImportHistory
+  getImportHistory,
+  deleteUser
 };

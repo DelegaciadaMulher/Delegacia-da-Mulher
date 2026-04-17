@@ -36,7 +36,7 @@ registerForm.addEventListener('submit', async (event) => {
     cpf: normalizeCpf(document.getElementById('cpf').value),
     email: String(document.getElementById('email').value || '').trim(),
     phone: String(document.getElementById('phone').value || '').trim(),
-    role: String(document.getElementById('role').value || 'agent').trim()
+    role: 'agent'
   };
 
   try {

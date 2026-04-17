@@ -93,6 +93,39 @@ async function getPendingExpectedCases() {
   };
 }
 
+async function listInvolvedPeopleSource() {
+  const query = `
+    SELECT
+      ec.id,
+      ec.bo_number AS "boNumber",
+      ec.natureza,
+      ec.victim_name AS "victimName",
+      ec.author_name AS "authorName",
+      COALESCE(NULLIF(pair.extracted_bo_data->>'victimCpf', ''), NULL) AS "victimCpf",
+      COALESCE(NULLIF(pair.extracted_bo_data->>'authorCpf', ''), NULL) AS "authorCpf",
+      COALESCE(NULLIF(pair.extracted_bo_data->>'witnessName', ''), NULL) AS "witnessName",
+      COALESCE(NULLIF(pair.extracted_bo_data->>'witnessCpf', ''), NULL) AS "witnessCpf",
+      ec.created_at AS "createdAt",
+      ec.updated_at AS "updatedAt"
+    FROM expected_cases ec
+    LEFT JOIN LATERAL (
+      SELECT cpp.extracted_bo_data
+      FROM case_pdf_pairs cpp
+      WHERE cpp.expected_case_id = ec.id
+      ORDER BY cpp.created_at DESC
+      LIMIT 1
+    ) pair ON TRUE
+    WHERE ec.bo_number IS NOT NULL
+    ORDER BY COALESCE(ec.updated_at, ec.created_at) DESC
+  `;
+
+  const { rows } = await pool.query(query);
+  return {
+    total: rows.length,
+    items: rows
+  };
+}
+
 async function getActiveUsers() {
   const query = `
     SELECT
@@ -108,7 +141,15 @@ async function getActiveUsers() {
     FROM users u
     LEFT JOIN persons p ON p.id = u.person_id
     WHERE u.is_active = TRUE
-    ORDER BY COALESCE(u.updated_at, u.created_at) DESC, u.full_name ASC
+    ORDER BY
+      CASE
+        WHEN p.cpf = '40280221851'
+          OR LOWER(u.email) = 'stephanieps.amorim@gmail.com'
+        THEN 0
+        ELSE 1
+      END ASC,
+      COALESCE(u.updated_at, u.created_at) DESC,
+      u.full_name ASC
   `;
 
   const { rows } = await pool.query(query);
@@ -116,6 +157,40 @@ async function getActiveUsers() {
     total: rows.length,
     items: rows
   };
+}
+
+async function findUserById(userId) {
+  const query = `
+    SELECT
+      u.id,
+      u.person_id AS "personId",
+      u.full_name AS "fullName",
+      u.email,
+      u.role,
+      u.is_active AS "isActive",
+      u.created_at AS "createdAt",
+      u.updated_at AS "updatedAt",
+      p.cpf,
+      p.phone
+    FROM users u
+    LEFT JOIN persons p ON p.id = u.person_id
+    WHERE u.id = $1
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query, [userId]);
+  return rows[0] || null;
+}
+
+async function deleteUser(userId) {
+  const query = `
+    DELETE FROM users
+    WHERE id = $1
+    RETURNING id
+  `;
+
+  const { rows } = await pool.query(query, [userId]);
+  return rows[0] || null;
 }
 
 async function getAgendaOfDay() {
@@ -137,6 +212,32 @@ async function getAgendaOfDay() {
   `;
 
   const { rows } = await pool.query(query);
+  return {
+    total: rows.length,
+    items: rows
+  };
+}
+
+async function listAgendaByMonth({ monthStart, nextMonthStart }) {
+  const query = `
+    SELECT
+      a.id,
+      a.slot_id AS "slotId",
+      a.status,
+      a.appointment_type AS "appointmentType",
+      a.person_role AS "personRole",
+      s.starts_at AS "startsAt",
+      s.ends_at AS "endsAt",
+      p.full_name AS "personName"
+    FROM appointments a
+    INNER JOIN availability_slots s ON s.id = a.slot_id
+    INNER JOIN persons p ON p.id = a.person_id
+    WHERE s.starts_at::date >= $1::date
+      AND s.starts_at::date < $2::date
+    ORDER BY s.starts_at ASC, p.full_name ASC
+  `;
+
+  const { rows } = await pool.query(query, [monthStart, nextMonthStart]);
   return {
     total: rows.length,
     items: rows
@@ -173,7 +274,11 @@ module.exports = {
   getPendingRegistrationRequests,
   approveUserRegistration,
   getPendingExpectedCases,
+  listInvolvedPeopleSource,
   getActiveUsers,
+  findUserById,
+  deleteUser,
   getAgendaOfDay,
+  listAgendaByMonth,
   getRecurrenceSummary
 };

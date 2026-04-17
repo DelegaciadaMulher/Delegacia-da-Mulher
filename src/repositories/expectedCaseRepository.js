@@ -25,6 +25,12 @@ async function createExpectedCaseFromBo({ dailyImportId, periodStart, boBook }) 
       author_name
     )
     VALUES ($1, $2, NULL, 1, 'PENDENTE', $3, $4, $5, $6)
+    ON CONFLICT (daily_import_id, bo_number)
+    WHERE bo_number IS NOT NULL
+    DO UPDATE SET
+      natureza = COALESCE(NULLIF(expected_cases.natureza, ''), EXCLUDED.natureza),
+      victim_name = COALESCE(NULLIF(expected_cases.victim_name, ''), EXCLUDED.victim_name),
+      author_name = COALESCE(NULLIF(expected_cases.author_name, ''), EXCLUDED.author_name)
     RETURNING
       id,
       daily_import_id AS "dailyImportId",

@@ -96,7 +96,7 @@ async function loadPendingRegistrations() {
   }
 
   if (!response.ok) {
-    throw new Error('Falha ao carregar cadastros pendentes.');
+    throw new Error('Falha ao carregar solicitações de cadastro.');
   }
 
   const data = await response.json();

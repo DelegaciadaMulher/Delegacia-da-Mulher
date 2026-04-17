@@ -12,6 +12,10 @@ function formatDateTime(isoDate) {
 }
 
 function renderList(container, items, renderItem) {
+  if (!container) {
+    return;
+  }
+
   if (!items || !items.length) {
     container.innerHTML = '<p class="muted">Sem registros.</p>';
     return;
@@ -40,16 +44,22 @@ function writeDashboardSummaryCache(summary) {
 
 function buildSummaryCards(summary) {
   return [
-    { label: 'Casos Hoje', value: summary.casesOfDayTotal },
+    { label: 'Envolvidos', value: summary.involvedPeopleTotal, action: 'goToInvolvedPage' },
     { label: 'Usuarios', value: summary.activeUsers, action: 'goToUsersPage' },
-    { label: 'Cadastros pendentes', value: summary.pendingRegistrations, action: 'goToRegistrationRequestsPage' },
-    { label: 'Pend. Casos', value: summary.expectedCasesPending, action: 'goToPendingPage' },
-    { label: 'Pend. Intimacoes', value: summary.summonsPending },
-    { label: 'Pend. Notificacoes', value: summary.notificationsPending }
+    { label: 'Solicitações de cadastro', value: summary.pendingRegistrations, action: 'goToRegistrationRequestsPage' },
+    { label: 'BOs Pendentes', value: summary.expectedCasesPending, action: 'goToPendingPage' },
+    { label: 'Agenda', value: summary.agendaTotal, action: 'goToAgendaPage' },
+    { label: 'Intimações Pendentes', value: summary.summonsPending },
+    { label: 'Natureza', value: summary.notificationsPending, action: 'goToNaturePage' }
   ];
 }
 
 function runSummaryCardAction(action) {
+  if (action === 'goToInvolvedPage') {
+    window.location.href = '/admin/envolvidos';
+    return;
+  }
+
   if (action === 'goToUsersPage') {
     window.location.href = '/admin/usuarios';
     return;
@@ -62,6 +72,16 @@ function runSummaryCardAction(action) {
 
   if (action === 'goToPendingPage') {
     window.location.href = '/admin/pendencias';
+    return;
+  }
+
+  if (action === 'goToAgendaPage') {
+    window.location.href = '/admin/agenda';
+    return;
+  }
+
+  if (action === 'goToNaturePage') {
+    window.location.href = '/admin/natureza';
   }
 }
 
@@ -333,6 +353,10 @@ async function loadRegistrationRequests() {
   const container = document.getElementById('registrationRequestsList');
   const hint = document.getElementById('registrationRequestsHint');
 
+  if (!container || !hint) {
+    return;
+  }
+
   if (!token) {
     container.innerHTML = '<p class="muted">Nenhuma solicitacao encontrada.</p>';
     hint.textContent = '';
@@ -397,6 +421,11 @@ async function approveRegistrationRequest(userId) {
 
 function bindRegistrationRequestActions() {
   const container = document.getElementById('registrationRequestsList');
+
+  if (!container) {
+    return;
+  }
+
   container.addEventListener('click', async (event) => {
     const button = event.target.closest('.approve-btn');
     if (!button) {
@@ -770,6 +799,7 @@ async function loadDashboard() {
   }
 
   data.casesOfDay = data.casesOfDay || { total: 0, items: [] };
+  data.involvedPeople = data.involvedPeople || { total: 0 };
   data.agendaOfDay = data.agendaOfDay || { total: 0, items: [] };
   data.recurrence = data.recurrence || { total: 0, items: [] };
 
@@ -789,6 +819,8 @@ async function loadDashboard() {
 
   const summarySnapshot = {
     casesOfDayTotal: safeCount(data.casesOfDay.total),
+    involvedPeopleTotal: safeCount(data.involvedPeople.total),
+    agendaTotal: safeCount(data.agendaOfDay.total),
     activeUsers: data.pending.activeUsers,
     pendingRegistrations: data.pending.pendingRegistrations,
     expectedCasesPending: data.pending.expectedCasesPending,
@@ -811,7 +843,7 @@ async function loadDashboard() {
     <div class="item">
       <div><strong>Casos esperados:</strong> ${item.expectedCasesPending}</div>
       <div><strong>Intimacoes:</strong> ${item.summonsPending}</div>
-      <div><strong>Notificacoes:</strong> ${item.notificationsPending}</div>
+      <div><strong>Natureza:</strong> ${item.notificationsPending}</div>
     </div>
   `);
 
@@ -853,6 +885,9 @@ const cachedDashboardSummary = readDashboardSummaryCache();
 if (cachedDashboardSummary) {
   renderSummaryCards(buildSummaryCards({
     casesOfDayTotal: safeCount(cachedDashboardSummary.casesOfDayTotal),
+    involvedPeopleTotal: safeCount(cachedDashboardSummary.involvedPeopleTotal),
+    agendaTotal: safeCount(cachedDashboardSummary.agendaTotal),
+    activeUsers: safeCount(cachedDashboardSummary.activeUsers),
     pendingRegistrations: safeCount(cachedDashboardSummary.pendingRegistrations),
     expectedCasesPending: safeCount(cachedDashboardSummary.expectedCasesPending),
     summonsPending: safeCount(cachedDashboardSummary.summonsPending),

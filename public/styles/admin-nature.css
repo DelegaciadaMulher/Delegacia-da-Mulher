@@ -1,0 +1,93 @@
+.summary-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.nature-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.nature-card {
+  display: grid;
+  gap: 10px;
+}
+
+.nature-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.nature-title {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: #30182f;
+}
+
+.nature-title-disabled {
+  opacity: 0.55;
+}
+
+.nature-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  color: #7a5b76;
+  font-weight: 600;
+}
+
+.nature-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nature-toggle-box {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 2px solid rgba(151, 31, 93, 0.35);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  flex-shrink: 0;
+}
+
+.nature-toggle-box::after {
+  content: '';
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) scale(0);
+  transform-origin: center;
+  transition: transform 0.18s ease;
+}
+
+.nature-toggle input:checked + .nature-toggle-box {
+  background: #971f5d;
+  border-color: #971f5d;
+}
+
+.nature-toggle input:checked + .nature-toggle-box::after {
+  transform: rotate(-45deg) scale(1);
+}
+
+.nature-toggle input:focus-visible + .nature-toggle-box {
+  outline: 3px solid rgba(213, 53, 138, 0.25);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .nature-card-header {
+    justify-content: flex-start;
+  }
+}

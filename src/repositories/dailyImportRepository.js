@@ -24,6 +24,25 @@ async function getLastImportedPeriod() {
   return rows[0] || null;
 }
 
+async function findImportByPeriod({ periodStart, periodEnd }) {
+  const query = `
+    SELECT
+      id,
+      import_date AS "importDate",
+      source_name AS "sourceName",
+      period_start AS "periodStart",
+      period_end AS "periodEnd",
+      created_at AS "createdAt"
+    FROM daily_imports
+    WHERE period_start = $1
+      AND period_end = $2
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query, [periodStart, periodEnd]);
+  return rows[0] || null;
+}
+
 async function createImportWithPeriod({ sourceName, periodStart, periodEnd, notes }) {
   const query = `
     INSERT INTO daily_imports (
@@ -100,6 +119,7 @@ async function deleteImportById(importId) {
 
 module.exports = {
   getLastImportedPeriod,
+  findImportByPeriod,
   createImportWithPeriod,
   getImportHistory,
   deleteImportById

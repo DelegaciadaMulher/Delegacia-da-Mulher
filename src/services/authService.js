@@ -284,7 +284,7 @@ async function register(payload) {
   const fullName = String(payload.fullName || '').trim();
   const email = String(payload.email || '').trim();
   const phone = String(payload.phone || '').trim();
-  const role = String(payload.role || 'agent').trim().toLowerCase();
+  const role = 'agent';
 
   if (!fullName) {
     const error = new Error('Nome completo e obrigatorio.');
@@ -306,12 +306,6 @@ async function register(payload) {
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     const error = new Error('Email invalido.');
-    error.statusCode = 400;
-    throw error;
-  }
-
-  if (!['agent', 'admin', 'manager'].includes(role)) {
-    const error = new Error('Perfil invalido.');
     error.statusCode = 400;
     throw error;
   }

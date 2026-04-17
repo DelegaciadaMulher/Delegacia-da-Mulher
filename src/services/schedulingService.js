@@ -1,9 +1,132 @@
 const dayjs = require('dayjs');
+const customParseFormat = require('dayjs/plugin/customParseFormat');
 const crypto = require('crypto');
 
 const schedulingRepository = require('../repositories/schedulingRepository');
+const localSchedulingRepository = require('../repositories/localSchedulingRepository');
 const personService = require('./personService');
 const victimNotificationService = require('./victimNotificationService');
+const env = require('../config/env');
+
+dayjs.extend(customParseFormat);
+
+function shouldUseLocalSimulation() {
+  return env.auth.devMode;
+}
+
+function normalizePersonRole(value) {
+  const normalized = String(value || '').trim().toUpperCase();
+  return normalized === 'INFRATOR' ? 'AUTOR' : normalized;
+}
+
+function normalizeDateOnly(value) {
+  if (!value) {
+    return null;
+  }
+
+  const raw = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const parsed = dayjs(raw);
+  return parsed.isValid() ? parsed.format('YYYY-MM-DD') : null;
+}
+
+function validateSchedulingSettingsPayload(payload, currentSettings = {}) {
+  const hasGapValue = payload && payload.victimAuthorGapHours != null && String(payload.victimAuthorGapHours).trim() !== '';
+  const hasAuthorSummonsMaxDays = payload && payload.authorSummonsMaxDays != null && String(payload.authorSummonsMaxDays).trim() !== '';
+  const victimAuthorGapHours = Number(hasGapValue ? payload.victimAuthorGapHours : currentSettings.victimAuthorGapHours);
+  const authorSummonsMaxDays = Number(hasAuthorSummonsMaxDays ? payload.authorSummonsMaxDays : currentSettings.authorSummonsMaxDays);
+
+  if (!Number.isInteger(victimAuthorGapHours) || victimAuthorGapHours < 0 || victimAuthorGapHours > 720) {
+    const error = new Error('victimAuthorGapHours deve ser um numero inteiro entre 0 e 720.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!Number.isInteger(authorSummonsMaxDays) || authorSummonsMaxDays < 0 || authorSummonsMaxDays > 365) {
+    const error = new Error('authorSummonsMaxDays deve ser um numero inteiro entre 0 e 365.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    victimAuthorGapHours,
+    authorSummonsMaxDays
+  };
+}
+
+function isVictimAuthorRole(personRole) {
+  return personRole === 'VITIMA' || personRole === 'AUTOR';
+}
+
+function getOppositeVictimAuthorRole(personRole) {
+  if (personRole === 'VITIMA') {
+    return 'AUTOR';
+  }
+
+  if (personRole === 'AUTOR') {
+    return 'VITIMA';
+  }
+
+  return null;
+}
+
+function isAuthorRole(personRole) {
+  return personRole === 'AUTOR';
+}
+
+async function readSchedulingSettings() {
+  if (shouldUseLocalSimulation()) {
+    const result = await localSchedulingRepository.getSchedulingSettings();
+    return {
+      mocked: true,
+      ...result
+    };
+  }
+
+  try {
+    return await schedulingRepository.getSchedulingSettings();
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    const result = await localSchedulingRepository.getSchedulingSettings();
+    return {
+      mocked: true,
+      ...result
+    };
+  }
+}
+
+async function saveSchedulingSettings(payload) {
+  const currentSettings = await readSchedulingSettings();
+  const input = validateSchedulingSettingsPayload(payload, currentSettings);
+
+  if (shouldUseLocalSimulation()) {
+    const result = await localSchedulingRepository.updateSchedulingSettings(input);
+    return {
+      mocked: true,
+      ...result
+    };
+  }
+
+  try {
+    return await schedulingRepository.updateSchedulingSettings(input);
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    const result = await localSchedulingRepository.updateSchedulingSettings(input);
+    return {
+      mocked: true,
+      ...result
+    };
+  }
+}
 
 function parseDateAndTime(date, time) {
   return dayjs(`${date} ${time}`, 'YYYY-MM-DD HH:mm', true);
@@ -44,9 +167,185 @@ function validateGeneratePayload(payload) {
   };
 }
 
+function validateListAvailabilityInput(payload) {
+  const input = typeof payload === 'string'
+    ? { date: payload }
+    : (payload || {});
+  const normalizedDate = String(input.date || '').trim();
+
+  if (!dayjs(normalizedDate, 'YYYY-MM-DD', true).isValid()) {
+    const error = new Error('Data invalida. Use YYYY-MM-DD.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let caseId = null;
+  if (input.caseId != null && String(input.caseId).trim() !== '') {
+    caseId = Number(input.caseId);
+    if (!Number.isInteger(caseId) || caseId <= 0) {
+      const error = new Error('caseId invalido.');
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  let personRole = null;
+  if (input.personRole != null && String(input.personRole).trim() !== '') {
+    personRole = normalizePersonRole(input.personRole);
+    if (!['VITIMA', 'AUTOR', 'TESTEMUNHA', 'RESPONSAVEL'].includes(personRole)) {
+      const error = new Error('personRole invalido. Use VITIMA, AUTOR, TESTEMUNHA ou RESPONSAVEL.');
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  return {
+    date: normalizedDate,
+    caseId,
+    personRole
+  };
+}
+
+function buildGapViolationError(victimAuthorGapHours) {
+  const error = new Error(`Deve haver pelo menos ${victimAuthorGapHours} hora(s) de diferenca entre os agendamentos de vitima e infrator do mesmo caso.`);
+  error.statusCode = 409;
+  return error;
+}
+
+function buildAuthorSummonsDeadlineError(dueDate) {
+  const normalizedDueDate = normalizeDateOnly(dueDate);
+  const formattedDueDate = normalizedDueDate && dayjs(normalizedDueDate).isValid()
+    ? dayjs(normalizedDueDate).format('DD/MM/YYYY')
+    : valueOrFallback(normalizedDueDate, 'data informada');
+  const error = new Error(`O infrator deste caso pode agendar somente ate ${formattedDueDate}, conforme o prazo maximo da intimacao.`);
+  error.statusCode = 409;
+  return error;
+}
+
+function valueOrFallback(value, fallback) {
+  const text = String(value || '').trim();
+  return text || fallback;
+}
+
+function findGapConflict({ targetStartsAt, appointments, victimAuthorGapHours }) {
+  const targetTime = new Date(targetStartsAt).getTime();
+  const minimumGapMs = victimAuthorGapHours * 60 * 60 * 1000;
+
+  return (Array.isArray(appointments) ? appointments : []).find((appointment) => {
+    const appointmentTime = new Date(appointment.startsAt).getTime();
+    if (Number.isNaN(targetTime) || Number.isNaN(appointmentTime)) {
+      return false;
+    }
+
+    return Math.abs(targetTime - appointmentTime) < minimumGapMs;
+  }) || null;
+}
+
+async function findVictimAuthorGapConflict({ startsAt, caseId, personRole, victimAuthorGapHours }) {
+  if (!caseId || !isVictimAuthorRole(personRole) || victimAuthorGapHours <= 0) {
+    return null;
+  }
+
+  const repository = shouldUseLocalSimulation() ? localSchedulingRepository : schedulingRepository;
+  const oppositeRole = getOppositeVictimAuthorRole(personRole);
+  const appointments = await repository.listAppointmentsByCaseAndRoles({
+    caseId,
+    roles: oppositeRole ? [oppositeRole] : []
+  });
+
+  return findGapConflict({
+    targetStartsAt: startsAt,
+    appointments,
+    victimAuthorGapHours
+  });
+}
+
+async function findAuthorSummonsDeadline({ caseId, personRole }) {
+  if (!caseId || !isAuthorRole(personRole)) {
+    return null;
+  }
+
+  let latestSummons = null;
+
+  if (shouldUseLocalSimulation()) {
+    latestSummons = await localSchedulingRepository.findLatestSummonsDeadlineByCaseAndPersonType({
+      caseId,
+      personType: 'AUTOR'
+    });
+
+    if (!latestSummons) {
+      try {
+        latestSummons = await schedulingRepository.findLatestSummonsDeadlineByCaseAndPersonType({
+          caseId,
+          personType: 'AUTOR'
+        });
+      } catch (error) {
+        latestSummons = null;
+      }
+    }
+  } else {
+    latestSummons = await schedulingRepository.findLatestSummonsDeadlineByCaseAndPersonType({
+      caseId,
+      personType: 'AUTOR'
+    });
+  }
+
+  return normalizeDateOnly(latestSummons && latestSummons.dueDate);
+}
+
+async function assertAuthorSummonsDeadlineForSlot({ slotId, caseId, personRole }) {
+  if (!caseId || !isAuthorRole(personRole)) {
+    return;
+  }
+
+  const authorSummonsDueDate = await findAuthorSummonsDeadline({ caseId, personRole });
+  if (!authorSummonsDueDate) {
+    return;
+  }
+
+  const repository = shouldUseLocalSimulation() ? localSchedulingRepository : schedulingRepository;
+  const slot = await repository.findAvailabilitySlotById(slotId);
+  if (!slot) {
+    const error = new Error('Horario nao encontrado.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const slotDate = normalizeDateOnly(slot.startsAt);
+  if (slotDate && slotDate > authorSummonsDueDate) {
+    throw buildAuthorSummonsDeadlineError(authorSummonsDueDate);
+  }
+}
+
+async function assertVictimAuthorGapForSlot({ slotId, caseId, personRole, victimAuthorGapHours }) {
+  if (!caseId || !isVictimAuthorRole(personRole) || victimAuthorGapHours <= 0) {
+    return;
+  }
+
+  const repository = shouldUseLocalSimulation() ? localSchedulingRepository : schedulingRepository;
+  const slot = await repository.findAvailabilitySlotById(slotId);
+  if (!slot) {
+    const error = new Error('Horario nao encontrado.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const conflict = await findVictimAuthorGapConflict({
+    startsAt: slot.startsAt,
+    caseId,
+    personRole,
+    victimAuthorGapHours
+  });
+
+  if (conflict) {
+    throw buildGapViolationError(victimAuthorGapHours);
+  }
+}
+
 async function generateAvailability(payload) {
   const input = validateGeneratePayload(payload);
   const created = [];
+  const repository = shouldUseLocalSimulation() ? localSchedulingRepository : schedulingRepository;
 
   let cursor = input.start;
   while (true) {
@@ -57,7 +356,7 @@ async function generateAvailability(payload) {
       break;
     }
 
-    const slot = await schedulingRepository.createAvailabilitySlot({
+    const slot = await repository.createAvailabilitySlot({
       startsAt: slotStart.toDate(),
       endsAt: slotEnd.toDate()
     });
@@ -77,17 +376,45 @@ async function generateAvailability(payload) {
 }
 
 async function listAvailability(date) {
-  const normalizedDate = String(date || '').trim();
-  if (!dayjs(normalizedDate, 'YYYY-MM-DD', true).isValid()) {
-    const error = new Error('Data invalida. Use YYYY-MM-DD.');
-    error.statusCode = 400;
-    throw error;
+  const input = validateListAvailabilityInput(date);
+  const repository = shouldUseLocalSimulation() ? localSchedulingRepository : schedulingRepository;
+  const slots = await repository.listAvailabilityByDate(input.date);
+  const settings = await readSchedulingSettings();
+  const victimAuthorGapHours = Number(settings && settings.victimAuthorGapHours) || 0;
+  const authorSummonsMaxDays = Number(settings && settings.authorSummonsMaxDays);
+  const authorSummonsDueDate = await findAuthorSummonsDeadline({
+    caseId: input.caseId,
+    personRole: input.personRole
+  });
+  let filteredSlots = slots;
+
+  if (authorSummonsDueDate && input.date > authorSummonsDueDate) {
+    filteredSlots = [];
   }
 
-  const slots = await schedulingRepository.listAvailabilityByDate(normalizedDate);
+  if (filteredSlots.length > 0 && input.caseId && isVictimAuthorRole(input.personRole) && victimAuthorGapHours > 0) {
+    filteredSlots = [];
+
+    for (const slot of slots) {
+      const conflict = await findVictimAuthorGapConflict({
+        startsAt: slot.startsAt,
+        caseId: input.caseId,
+        personRole: input.personRole,
+        victimAuthorGapHours
+      });
+
+      if (!conflict) {
+        filteredSlots.push(slot);
+      }
+    }
+  }
+
   return {
-    date: normalizedDate,
-    slots
+    date: input.date,
+    victimAuthorGapHours,
+    authorSummonsMaxDays: Number.isInteger(authorSummonsMaxDays) ? authorSummonsMaxDays : 3,
+    authorSummonsDueDate,
+    slots: filteredSlots
   };
 }
 
@@ -95,7 +422,7 @@ function validateBookPayload(payload) {
   const slotId = Number(payload.slotId);
   const appointmentType = String(payload.appointmentType || 'ATENDIMENTO').trim().toUpperCase();
   const caseId = payload.caseId ? Number(payload.caseId) : null;
-  const personRole = payload.personRole ? String(payload.personRole).trim().toUpperCase() : null;
+  const personRole = payload.personRole ? normalizePersonRole(payload.personRole) : null;
 
   if (!Number.isInteger(slotId) || slotId <= 0) {
     const error = new Error('slotId invalido.');
@@ -161,6 +488,21 @@ async function tryBookWithUniqueAttendanceCode(params) {
 
 async function bookAppointment(payload) {
   const input = validateBookPayload(payload);
+  const settings = await readSchedulingSettings();
+  const victimAuthorGapHours = Number(settings && settings.victimAuthorGapHours) || 0;
+
+  await assertAuthorSummonsDeadlineForSlot({
+    slotId: input.slotId,
+    caseId: input.caseId,
+    personRole: input.personRole
+  });
+
+  await assertVictimAuthorGapForSlot({
+    slotId: input.slotId,
+    caseId: input.caseId,
+    personRole: input.personRole,
+    victimAuthorGapHours
+  });
 
   const person = await personService.upsertPerson({
     cpf: input.person.cpf,
@@ -227,9 +569,19 @@ async function confirmAttendance(payload) {
   };
 }
 
+async function getSchedulingSettings() {
+  return readSchedulingSettings();
+}
+
+async function updateSchedulingSettings(payload) {
+  return saveSchedulingSettings(payload);
+}
+
 module.exports = {
   generateAvailability,
   listAvailability,
   bookAppointment,
-  confirmAttendance
+  confirmAttendance,
+  getSchedulingSettings,
+  updateSchedulingSettings
 };

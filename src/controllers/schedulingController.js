@@ -11,7 +11,7 @@ async function generateAvailability(req, res, next) {
 
 async function listAvailability(req, res, next) {
   try {
-    const result = await schedulingService.listAvailability(req.query.date);
+    const result = await schedulingService.listAvailability(req.query);
     res.status(200).json(result);
   } catch (error) {
     next(error);

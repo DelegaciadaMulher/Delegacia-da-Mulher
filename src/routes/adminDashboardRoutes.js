@@ -6,8 +6,15 @@ const router = Router();
 
 router.use(requireSession, requireAdmin);
 router.get('/overview', adminDashboardController.getOverview);
+router.get('/agenda-calendar', adminDashboardController.getAgendaCalendar);
+router.get('/agenda-availability', adminDashboardController.getAgendaAvailability);
+router.post('/agenda-availability', adminDashboardController.createAgendaAvailability);
+router.get('/agenda-settings', adminDashboardController.getAgendaSettings);
+router.put('/agenda-settings', adminDashboardController.updateAgendaSettings);
 router.get('/import-history', adminDashboardController.getImportHistory);
+router.get('/involved-people', adminDashboardController.getInvolvedPeople);
 router.get('/users', adminDashboardController.getUsers);
+router.delete('/users/:userId', adminDashboardController.deleteUser);
 router.get('/pending-cases', adminDashboardController.getPendingCases);
 router.get('/pending-registrations', adminDashboardController.getPendingRegistrationRequests);
 router.post('/pending-registrations/:userId/approve', adminDashboardController.approveRegistrationRequest);

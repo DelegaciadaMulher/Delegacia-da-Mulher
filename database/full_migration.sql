@@ -603,6 +603,50 @@ COMMIT;
 
 
 
+-- Migração: 013_scheduling_gap_settings.sql
+-- ===========================================
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS scheduling_settings (
+  id SMALLINT PRIMARY KEY,
+  victim_author_gap_hours INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT scheduling_settings_singleton_chk CHECK (id = 1),
+  CONSTRAINT scheduling_settings_gap_chk CHECK (victim_author_gap_hours >= 0)
+);
+
+INSERT INTO scheduling_settings (id, victim_author_gap_hours)
+VALUES (1, 0)
+ON CONFLICT (id) DO NOTHING;
+
+COMMIT;
+
+
+
+-- Migração: 014_scheduling_author_summons_max_days.sql
+-- ===========================================
+
+BEGIN;
+
+ALTER TABLE scheduling_settings
+ADD COLUMN IF NOT EXISTS author_summons_max_days INTEGER NOT NULL DEFAULT 3;
+
+UPDATE scheduling_settings
+SET author_summons_max_days = 3
+WHERE author_summons_max_days IS NULL;
+
+ALTER TABLE scheduling_settings
+DROP CONSTRAINT IF EXISTS scheduling_settings_author_summons_max_days_chk;
+
+ALTER TABLE scheduling_settings
+ADD CONSTRAINT scheduling_settings_author_summons_max_days_chk CHECK (author_summons_max_days >= 0);
+
+COMMIT;
+
+
+
 -- ===========================================
 -- SEEDS DATA
 -- ===========================================

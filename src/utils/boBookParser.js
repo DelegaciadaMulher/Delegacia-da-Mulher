@@ -341,23 +341,29 @@ function parseBoBookContent(rawText) {
 
   const natureza = extractByRegex(
     text,
-    /(?:natureza(?:\s+da\s+ocorrencia|\s+da\s+ocorrência)?)\s*[:\-]?\s*(.+?)(?=\s+(?:vitima|vítima|autor|autora|indiciado|historico|histórico|data|hora|bairro|local|endereco|endereço)\s*[:\-]|$)/i
+    /(?:natureza(?:\s+da\s+ocorrencia|\s+da\s+ocorrência)?)\s*[:\-]?\s*(.+?)(?=\s+(?:vitima|vítima|autor|autora|indiciado|testemunha|cpf(?:\s+da\s+vitima|\s+da\s+vítima|\s+do\s+autor|\s+da\s+autora|\s+da\s+testemunha)?|historico|histórico|data|hora|bairro|local|endereco|endereço)\s*[:\-]|$)/i
   );
 
   const victim = extractByRegex(
     text,
-    /(?:vitima|vítima)\s*[:\-]?\s*(.+?)(?=\s+(?:autor|autora|indiciado|natureza|historico|histórico|data|hora|bairro|local|endereco|endereço)\s*[:\-]|$)/i
+    /(?:vitima|vítima)\s*[:\-]?\s*(.+?)(?=\s+(?:autor|autora|indiciado|testemunha|natureza|cpf(?:\s+da\s+vitima|\s+da\s+vítima|\s+do\s+autor|\s+da\s+autora|\s+da\s+testemunha)?|historico|histórico|data|hora|bairro|local|endereco|endereço)\s*[:\-]|$)/i
   );
 
   const author = extractByRegex(
     text,
-    /(?:autor|autora|indiciado)\s*[:\-]?\s*(.+?)(?=\s+(?:vitima|vítima|natureza|historico|histórico|data|hora|bairro|local|endereco|endereço)\s*[:\-]|$)/i
+    /(?:autor|autora|indiciado)\s*[:\-]?\s*(.+?)(?=\s+(?:vitima|vítima|testemunha|natureza|cpf(?:\s+da\s+vitima|\s+da\s+vítima|\s+do\s+autor|\s+da\s+autora|\s+da\s+testemunha)?|historico|histórico|data|hora|bairro|local|endereco|endereço)\s*[:\-]|$)/i
+  );
+
+  const witness = extractByRegex(
+    text,
+    /(?:testemunha)\s*[:\-]?\s*(.+?)(?=\s+(?:vitima|vítima|autor|autora|indiciado|natureza|cpf(?:\s+da\s+vitima|\s+da\s+vítima|\s+do\s+autor|\s+da\s+autora|\s+da\s+testemunha)?|historico|histórico|data|hora|bairro|local|endereco|endereço)\s*[:\-]|$)/i
   );
 
   const victimCpf = extractCpfByLabel(text, '(?:cpf\s+da\s+vitima|cpf\s+da\s+vítima|vitima|vítima)');
   const authorCpf = extractCpfByLabel(text, '(?:cpf\s+do\s+autor|cpf\s+da\s+autora|autor|autora|indiciado)');
+  const witnessCpf = extractCpfByLabel(text, '(?:cpf\s+da\s+testemunha|cpf\s+do\s+testemunho|testemunha)');
 
-  const hasSomeData = boNumber || natureza || victim || author;
+  const hasSomeData = boNumber || natureza || victim || author || witness;
 
   if (!hasSomeData) {
     const error = new Error('Nao foi possivel extrair dados do Livro de BO.');
@@ -371,9 +377,11 @@ function parseBoBookContent(rawText) {
     natureza: removeReportArtifacts(natureza),
     victim: removeReportArtifacts(victim, { personField: true }),
     author: removeReportArtifacts(author, { personField: true }),
+    witness: removeReportArtifacts(witness, { personField: true }),
     local: null,
     victimCpf,
-    authorCpf
+    authorCpf,
+    witnessCpf
   };
 }
 
@@ -401,9 +409,11 @@ function parseBoBookEntries(rawText) {
     natureza: null,
     victim: null,
     author: null,
+    witness: null,
     local: null,
     victimCpf: null,
-    authorCpf: null
+    authorCpf: null,
+    witnessCpf: null
   }));
 }
 

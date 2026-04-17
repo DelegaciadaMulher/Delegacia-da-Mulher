@@ -16,6 +16,22 @@ async function createAvailabilitySlot({ startsAt, endsAt }) {
   return rows[0] || null;
 }
 
+async function findAvailabilitySlotById(slotId) {
+  const query = `
+    SELECT
+      id,
+      starts_at AS "startsAt",
+      ends_at AS "endsAt",
+      status
+    FROM availability_slots
+    WHERE id = $1
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query, [slotId]);
+  return rows[0] || null;
+}
+
 async function listAvailabilityByDate(date) {
   const query = `
     SELECT
@@ -30,6 +46,98 @@ async function listAvailabilityByDate(date) {
 
   const { rows } = await pool.query(query, [date]);
   return rows;
+}
+
+async function listAppointmentsByCaseAndRoles({ caseId, roles }) {
+  const query = `
+    SELECT
+      a.id,
+      a.case_id AS "caseId",
+      a.person_role AS "personRole",
+      a.status,
+      s.starts_at AS "startsAt",
+      s.ends_at AS "endsAt"
+    FROM appointments a
+    INNER JOIN availability_slots s ON s.id = a.slot_id
+    WHERE a.case_id = $1
+      AND a.status <> 'CANCELADO'
+      AND ($2::text[] IS NULL OR a.person_role = ANY($2::text[]))
+    ORDER BY s.starts_at ASC
+  `;
+
+  const roleList = Array.isArray(roles) && roles.length ? roles : null;
+  const { rows } = await pool.query(query, [caseId, roleList]);
+  return rows;
+}
+
+async function findLatestSummonsDeadlineByCaseAndPersonType({ caseId, personType }) {
+  const query = `
+    SELECT
+      due_date AS "dueDate",
+      delivered_at AS "deliveredAt",
+      created_at AS "createdAt",
+      status
+    FROM summons
+    WHERE case_id = $1
+      AND person_type = $2
+      AND status <> 'cancelled'
+      AND (delivered_at IS NOT NULL OR status IN ('sent', 'received', 'expired'))
+    ORDER BY COALESCE(delivered_at, created_at) DESC, id DESC
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query, [caseId, personType]);
+  return rows[0] || null;
+}
+
+async function ensureSchedulingSettingsRow() {
+  await pool.query(
+    `
+    INSERT INTO scheduling_settings (id, victim_author_gap_hours, author_summons_max_days)
+    VALUES (1, 0, 3)
+    ON CONFLICT (id) DO NOTHING
+    `
+  );
+}
+
+async function getSchedulingSettings() {
+  await ensureSchedulingSettingsRow();
+
+  const query = `
+    SELECT
+      victim_author_gap_hours AS "victimAuthorGapHours",
+      author_summons_max_days AS "authorSummonsMaxDays",
+      updated_at AS "updatedAt"
+    FROM scheduling_settings
+    WHERE id = 1
+    LIMIT 1
+  `;
+
+  const { rows } = await pool.query(query);
+  return rows[0] || {
+    victimAuthorGapHours: 0,
+    authorSummonsMaxDays: 3,
+    updatedAt: null
+  };
+}
+
+async function updateSchedulingSettings({ victimAuthorGapHours, authorSummonsMaxDays }) {
+  const query = `
+    INSERT INTO scheduling_settings (id, victim_author_gap_hours, author_summons_max_days)
+    VALUES (1, $1, $2)
+    ON CONFLICT (id)
+    DO UPDATE SET
+      victim_author_gap_hours = EXCLUDED.victim_author_gap_hours,
+      author_summons_max_days = EXCLUDED.author_summons_max_days,
+      updated_at = NOW()
+    RETURNING
+      victim_author_gap_hours AS "victimAuthorGapHours",
+      author_summons_max_days AS "authorSummonsMaxDays",
+      updated_at AS "updatedAt"
+  `;
+
+  const { rows } = await pool.query(query, [victimAuthorGapHours, authorSummonsMaxDays]);
+  return rows[0] || null;
 }
 
 async function bookAppointment({ slotId, personId, userId, appointmentType, notes, attendanceCode, caseId, personRole }) {
@@ -152,7 +260,12 @@ async function confirmAttendanceByCode({ attendanceCode, adminUserId }) {
 
 module.exports = {
   createAvailabilitySlot,
+  findAvailabilitySlotById,
   listAvailabilityByDate,
+  listAppointmentsByCaseAndRoles,
+  findLatestSummonsDeadlineByCaseAndPersonType,
+  getSchedulingSettings,
+  updateSchedulingSettings,
   bookAppointment,
   confirmAttendanceByCode
 };

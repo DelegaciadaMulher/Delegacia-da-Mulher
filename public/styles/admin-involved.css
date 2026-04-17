@@ -1,0 +1,126 @@
+.involved-summary-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.involved-toolbar {
+  margin-bottom: 16px;
+}
+
+.search-field {
+  display: grid;
+  gap: 8px;
+  max-width: 420px;
+}
+
+.search-label {
+  color: #7b0f45;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.search-field input {
+  width: 100%;
+  border: 1px solid #f3cce2;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  color: #2e1531;
+  background: #fff;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.search-field input::placeholder {
+  color: #8f6f8d;
+}
+
+.search-field input:focus {
+  outline: none;
+  border-color: rgba(191, 43, 113, 0.48);
+  box-shadow: 0 0 0 4px rgba(239, 77, 158, 0.12);
+}
+
+.involved-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.involved-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(123, 15, 69, 0.06);
+}
+
+.involved-card-recurrent {
+  border-color: rgba(123, 15, 69, 0.22);
+  background: linear-gradient(180deg, #fff8fc 0%, #fff4fa 100%);
+}
+
+.involved-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(239, 77, 158, 0.14);
+  color: #7b0f45;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-chip-recurrent {
+  background: rgba(123, 15, 69, 0.12);
+}
+
+.role-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(191, 43, 113, 0.1);
+  color: #7b0f45;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.involved-meta {
+  color: #5f4765;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .involved-toolbar {
+    margin-bottom: 14px;
+  }
+
+  .search-field {
+    max-width: none;
+  }
+
+  .involved-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .involved-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

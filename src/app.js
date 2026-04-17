@@ -41,6 +41,10 @@ app.get('/admin/usuarios', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'admin-users.html'));
 });
 
+app.get('/admin/envolvidos', (req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'public', 'admin-involved.html'));
+});
+
 app.get('/admin/painel', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'admin-dashboard.html'));
 });
@@ -51,6 +55,14 @@ app.get('/admin/historico', (req, res) => {
 
 app.get('/admin/pendencias', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'admin-pending.html'));
+});
+
+app.get('/admin/agenda', (req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'public', 'admin-agenda.html'));
+});
+
+app.get('/admin/natureza', (req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'public', 'admin-nature.html'));
 });
 
 app.use(errorHandler);

@@ -6,6 +6,7 @@ const env = require('../config/env');
 const personRepository = require('../repositories/personRepository');
 const personService = require('./personService');
 const summonsRepository = require('../repositories/summonsRepository');
+const schedulingService = require('./schedulingService');
 const victimNotificationService = require('./victimNotificationService');
 
 const PERSON_TYPES = ['VITIMA', 'AUTOR', 'TESTEMUNHA', 'RESPONSAVEL'];
@@ -93,7 +94,22 @@ async function resolvePersonByCpf(input) {
   });
 }
 
-function buildDueDate(input, personType) {
+async function resolveAuthorSummonsMaxDays() {
+  try {
+    const settings = await schedulingService.getSchedulingSettings();
+    const authorSummonsMaxDays = Number(settings && settings.authorSummonsMaxDays);
+
+    if (Number.isInteger(authorSummonsMaxDays) && authorSummonsMaxDays >= 0 && authorSummonsMaxDays <= 365) {
+      return authorSummonsMaxDays;
+    }
+  } catch (error) {
+    // Fallback para manter o comportamento anterior caso a configuracao ainda nao esteja disponivel.
+  }
+
+  return SUMMONS_TEMPLATE_BY_TYPE.AUTOR.daysToDue;
+}
+
+async function buildDueDate(input, personType) {
   if (input.dueDate) {
     const parsed = dayjs(input.dueDate);
     if (!parsed.isValid()) {
@@ -102,6 +118,11 @@ function buildDueDate(input, personType) {
       throw error;
     }
     return parsed.format('YYYY-MM-DD');
+  }
+
+  if (personType === 'AUTOR') {
+    const authorSummonsMaxDays = await resolveAuthorSummonsMaxDays();
+    return dayjs().add(authorSummonsMaxDays, 'day').format('YYYY-MM-DD');
   }
 
   return dayjs().add(SUMMONS_TEMPLATE_BY_TYPE[personType].daysToDue, 'day').format('YYYY-MM-DD');
@@ -155,7 +176,7 @@ function buildSummonsText(personType, personName) {
 async function generateSummons(payload) {
   const input = validatePayload(payload);
   const person = await resolvePersonByCpf(input);
-  const dueDate = buildDueDate(input, input.personType);
+  const dueDate = await buildDueDate(input, input.personType);
   const tokenData = buildJwtToken({
     caseId: input.caseId,
     personId: person.id,
