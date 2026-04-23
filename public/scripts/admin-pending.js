@@ -49,7 +49,6 @@ const pendingState = {
 };
 
 const PENDING_STATUS_CARDS = [
-  { key: 'total', label: 'Total' },
   { key: 'pending', label: 'Pendentes' },
   { key: 'victimIntimated', label: 'Vitima intimada' },
   { key: 'authorIntimated', label: 'Infrator intimado' },
@@ -58,7 +57,8 @@ const PENDING_STATUS_CARDS = [
   { key: 'authorHeard', label: 'Infrator ouvido' },
   { key: 'victimReported', label: 'Vitima reportada' },
   { key: 'witnessHeard', label: 'Testemulnha ouvida' },
-  { key: 'victimReportedDuplicate', label: 'Vitima reportada' }
+  { key: 'victimReportedDuplicate', label: 'Vitima reportada' },
+  { key: 'total', label: 'Total' }
 ];
 
 function escapeHtml(value) {
