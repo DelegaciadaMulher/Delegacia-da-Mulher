@@ -48,6 +48,7 @@ const pendingState = {
 };
 
 const PENDING_STATUS_CARDS = [
+  { key: 'total', label: 'Total' },
   { key: 'pending', label: 'Pendentes' },
   { key: 'victimIntimated', label: 'Vitima intimada' },
   { key: 'authorIntimated', label: 'Infrator intimado' },
@@ -161,6 +162,7 @@ function buildPendingStatusCounts(items, total) {
   );
 
   return {
+    total: Number.isFinite(total) ? total : safeItems.length,
     pending: Number.isFinite(total) ? total : safeItems.length,
     victimIntimated,
     authorIntimated,
