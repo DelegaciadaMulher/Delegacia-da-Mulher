@@ -47,6 +47,18 @@ const pendingState = {
   total: 0
 };
 
+const PENDING_STATUS_CARDS = [
+  { key: 'pending', label: 'Pendentes' },
+  { key: 'victimIntimated', label: 'Vitima intimada' },
+  { key: 'authorIntimated', label: 'Infrator intimado' },
+  { key: 'witnessIntimated', label: 'Testemunha intimadas' },
+  { key: 'victimHeard', label: 'Vitima ouvida' },
+  { key: 'authorHeard', label: 'Infrator ouvido' },
+  { key: 'victimReported', label: 'Vitima reportada' },
+  { key: 'witnessHeard', label: 'Testemulnha ouvida' },
+  { key: 'victimReportedDuplicate', label: 'Vitima reportada' }
+];
+
 function escapeHtml(value) {
   return String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -63,6 +75,140 @@ function valueOrDash(value) {
 
 function valueOrEmpty(value) {
   return value == null ? '' : String(value).trim();
+}
+
+function normalizeFlagText(value) {
+  return normalizeSearchText(value);
+}
+
+function hasTrueFlag(item, keys) {
+  return keys.some((key) => {
+    const value = item && item[key];
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) && value > 0;
+    }
+
+    const normalized = normalizeFlagText(value);
+    return normalized === 'true'
+      || normalized === 'sim'
+      || normalized === 'yes'
+      || normalized === 'ok'
+      || normalized === 'enviado'
+      || normalized === 'sent'
+      || normalized === 'intimado'
+      || normalized === 'intimada'
+      || normalized === 'ouvido'
+      || normalized === 'ouvida'
+      || normalized === 'reportado'
+      || normalized === 'reportada';
+  });
+}
+
+function matchesStatusFlag(item, keys, expectedValues) {
+  const normalizedExpected = expectedValues.map(normalizeFlagText);
+
+  return keys.some((key) => {
+    const normalized = normalizeFlagText(item && item[key]);
+    return normalizedExpected.includes(normalized);
+  });
+}
+
+function countPendingStatusItems(items, matcher) {
+  return items.filter((item) => matcher(item)).length;
+}
+
+function buildPendingStatusCounts(items, total) {
+  const safeItems = Array.isArray(items) ? items : [];
+
+  const victimIntimated = countPendingStatusItems(safeItems, (item) =>
+    hasTrueFlag(item, ['victimIntimated', 'victimSummoned', 'victimNotified', 'victimNotifiedAt'])
+      || matchesStatusFlag(item, ['victimSummonsStatus', 'victimStatus'], ['sent', 'intimada', 'intimado'])
+  );
+
+  const authorIntimated = countPendingStatusItems(safeItems, (item) =>
+    hasTrueFlag(item, ['authorIntimated', 'authorSummoned', 'authorNotified', 'authorNotifiedAt'])
+      || matchesStatusFlag(item, ['authorSummonsStatus', 'authorStatus'], ['sent', 'intimada', 'intimado'])
+  );
+
+  const witnessIntimated = countPendingStatusItems(safeItems, (item) =>
+    hasTrueFlag(item, ['witnessIntimated', 'witnessSummoned', 'witnessNotified', 'witnessNotifiedAt'])
+      || matchesStatusFlag(item, ['witnessSummonsStatus', 'witnessStatus'], ['sent', 'intimada', 'intimado'])
+  );
+
+  const victimHeard = countPendingStatusItems(safeItems, (item) =>
+    hasTrueFlag(item, ['victimHeard', 'victimHeardAt'])
+      || matchesStatusFlag(item, ['victimAttendanceStatus', 'victimHearingStatus'], ['heard', 'ouvida', 'ouvido'])
+  );
+
+  const authorHeard = countPendingStatusItems(safeItems, (item) =>
+    hasTrueFlag(item, ['authorHeard', 'authorHeardAt'])
+      || matchesStatusFlag(item, ['authorAttendanceStatus', 'authorHearingStatus'], ['heard', 'ouvida', 'ouvido'])
+  );
+
+  const witnessHeard = countPendingStatusItems(safeItems, (item) =>
+    hasTrueFlag(item, ['witnessHeard', 'witnessHeardAt'])
+      || matchesStatusFlag(item, ['witnessAttendanceStatus', 'witnessHearingStatus'], ['heard', 'ouvida', 'ouvido'])
+  );
+
+  const victimReported = countPendingStatusItems(safeItems, (item) =>
+    hasTrueFlag(item, ['victimReported', 'victimReportedAt'])
+      || matchesStatusFlag(item, ['victimReportStatus'], ['reportada', 'reportado'])
+  );
+
+  return {
+    pending: Number.isFinite(total) ? total : safeItems.length,
+    victimIntimated,
+    authorIntimated,
+    witnessIntimated,
+    victimHeard,
+    authorHeard,
+    victimReported,
+    witnessHeard,
+    victimReportedDuplicate: victimReported
+  };
+}
+
+function renderPendingStatusCards(counts) {
+  const container = document.getElementById('pendingStatusCards');
+  if (!container) {
+    return;
+  }
+
+  const hasStaticCards = PENDING_STATUS_CARDS.every((card) =>
+    Boolean(document.getElementById(`pendingCard-${card.key}`))
+  );
+
+  if (hasStaticCards) {
+    PENDING_STATUS_CARDS.forEach((card) => {
+      const value = Number(counts && counts[card.key]);
+      const safeValue = Number.isFinite(value) && value >= 0 ? value : 0;
+      const valueElement = document.getElementById(`pendingCard-${card.key}`);
+      if (valueElement) {
+        valueElement.textContent = String(safeValue);
+      }
+    });
+
+    return;
+  }
+
+  container.innerHTML = PENDING_STATUS_CARDS
+    .map((card) => {
+      const value = Number(counts && counts[card.key]);
+      const safeValue = Number.isFinite(value) && value >= 0 ? value : 0;
+
+      return `
+        <article class="pending-status-card">
+          <span class="pending-status-card-label">${escapeHtml(card.label)}</span>
+          <strong class="pending-status-card-value">${safeValue}</strong>
+        </article>
+      `;
+    })
+    .join('');
 }
 
 function readMessageDrafts() {
@@ -273,6 +419,7 @@ async function loadPendingCases() {
   pendingState.allItems = items;
   pendingState.total = total;
   document.getElementById('pendingCount').textContent = String(total);
+  renderPendingStatusCards(buildPendingStatusCounts(items, total));
   applyPendingFilter();
 }
 
