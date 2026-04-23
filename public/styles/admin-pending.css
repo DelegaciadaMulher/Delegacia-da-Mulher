@@ -176,22 +176,22 @@ h1 {
 .pending-status-cards {
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 14px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  overflow-x: hidden;
+  padding-bottom: 0;
 }
 
 .pending-status-card {
   border: 1px solid #d4e3ee;
   border-radius: 12px;
   background: #f6fbff;
-  padding: 9px 10px;
-  min-height: 82px;
-  min-width: 112px;
-  flex: 1 0 112px;
+  padding: 6px 7px;
+  min-height: 70px;
+  min-width: 0;
+  flex: 1 1 0;
   display: grid;
-  gap: 6px;
+  gap: 4px;
   align-content: space-between;
 }
 
@@ -216,15 +216,15 @@ h1 {
 
 .pending-status-card-label {
   color: var(--soft-ink);
-  font-size: 0.74rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.15;
 }
 
 .pending-status-card-value {
   font-family: 'Space Grotesk', sans-serif;
   color: var(--pink-900);
-  font-size: 1.2rem;
+  font-size: 1rem;
   line-height: 1;
 }
 
