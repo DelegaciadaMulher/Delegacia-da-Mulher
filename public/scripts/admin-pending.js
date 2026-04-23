@@ -75,7 +75,8 @@ function readMessageDrafts() {
 }
 
 function readWhatsappIndictMessage() {
-  return String(readMessageDrafts().whatsapp || '').trim();
+  const drafts = readMessageDrafts();
+  return String(drafts.whatsappInfractor || drafts.whatsapp || '').trim();
 }
 
 function readWhatsappImageUrl() {

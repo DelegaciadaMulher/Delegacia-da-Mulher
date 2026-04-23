@@ -164,6 +164,41 @@ h1 {
   isolation: isolate;
 }
 
+.quick-access-panel {
+  margin-bottom: 16px;
+  padding: 14px;
+}
+
+.quick-access-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quick-access-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #b9d5e7;
+  background: linear-gradient(160deg, #f7fbfe 0%, #ffffff 100%);
+  color: var(--pink-900);
+  text-decoration: none;
+  font-weight: 700;
+  text-align: center;
+  transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
+}
+
+.quick-access-btn:hover,
+.quick-access-btn:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--pink-500);
+  box-shadow: 0 10px 22px rgba(32, 137, 201, 0.16);
+  outline: none;
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -520,6 +555,10 @@ h1 {
   .summary-strip {
     position: static;
     padding: 0;
+
+  .quick-access-grid {
+    grid-template-columns: 1fr;
+  }
     border: none;
     border-radius: 0;
     background: transparent;

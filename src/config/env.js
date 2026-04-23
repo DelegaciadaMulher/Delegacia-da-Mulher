@@ -38,6 +38,7 @@ const env = {
     sessionExpiresIn: process.env.JWT_SESSION_EXPIRES_IN || '12h',
     devMode: process.env.AUTH_DEV_MODE === 'true',
     devSendRealOtp: process.env.AUTH_DEV_SEND_REAL_OTP === 'true',
+    devSendRealWhatsapp: process.env.AUTH_DEV_SEND_REAL_WHATSAPP === 'true',
     devAdminCpf: process.env.AUTH_DEV_ADMIN_CPF || '40280221851'
   },
   whatsapp: {

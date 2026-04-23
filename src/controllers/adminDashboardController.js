@@ -36,10 +36,13 @@ async function indictPendingCase(req, res, next) {
     }
 
     const { delivery, ...expectedCase } = result;
+    const isMockedDelivery = Boolean(delivery && delivery.mocked);
 
     res.status(200).json({
       success: true,
-      message: `Mensagem enviada e BO ${expectedCase.boNumber || expectedCaseId} encaminhado para indiciamento.`,
+      message: isMockedDelivery
+        ? `Modo simulacao: mensagem nao enviada ao WhatsApp. BO ${expectedCase.boNumber || expectedCaseId} encaminhado para indiciamento.`
+        : `Mensagem enviada e BO ${expectedCase.boNumber || expectedCaseId} encaminhado para indiciamento.`,
       expectedCase,
       delivery
     });

@@ -33,6 +33,10 @@ function isWhatsappUnavailableError(error) {
     || message.includes('connect econnrefused');
 }
 
+function canUseMockWhatsappFallback() {
+  return env.auth.devMode && !env.auth.devSendRealWhatsapp;
+}
+
 function resolvePublicBaseUrl(publicBaseUrl) {
   const rawValue = String(publicBaseUrl || env.whatsapp.publicBaseUrl || '').trim();
 
@@ -154,7 +158,24 @@ async function dispatchWhatsappMessage({ phone, message, imageUrl, context, temp
         imageUrl
       });
     } catch (error) {
-      if (env.auth.devMode && (isWhatsappConfigError(error) || isWhatsappUnavailableError(error))) {
+      // Alguns provedores/template endpoints rejeitam campos extras como imageUrl.
+      // Nesse caso, tentamos novamente sem imagem para manter o envio da mensagem.
+      if (imageUrl) {
+        try {
+          return await whatsappClient.sendTemplateMessage({
+            to: phone,
+            phone,
+            channel: 'whatsapp',
+            template: templateName,
+            variables: variables || {},
+            message
+          });
+        } catch (retryError) {
+          error = retryError;
+        }
+      }
+
+      if (canUseMockWhatsappFallback() && (isWhatsappConfigError(error) || isWhatsappUnavailableError(error))) {
         return {
           mocked: true,
           channel: 'whatsapp',
@@ -181,7 +202,20 @@ async function dispatchWhatsappMessage({ phone, message, imageUrl, context, temp
       imageUrl
     });
   } catch (error) {
-    if (env.auth.devMode && (isWhatsappConfigError(error) || isWhatsappUnavailableError(error))) {
+    if (imageUrl) {
+      try {
+        return await whatsappClient.sendTemplateMessage({
+          to: phone,
+          phone,
+          channel: 'whatsapp',
+          message
+        });
+      } catch (retryError) {
+        error = retryError;
+      }
+    }
+
+    if (canUseMockWhatsappFallback() && (isWhatsappConfigError(error) || isWhatsappUnavailableError(error))) {
       return {
         mocked: true,
         channel: 'whatsapp',
