@@ -191,6 +191,25 @@ h1 {
   align-content: space-between;
 }
 
+.pending-status-card.is-clickable {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.pending-status-card.is-clickable:hover,
+.pending-status-card.is-clickable:focus-visible {
+  transform: translateY(-1px);
+  border-color: #98bfd8;
+  box-shadow: 0 6px 16px rgba(24, 92, 135, 0.12);
+  outline: none;
+}
+
+.pending-status-card.is-active {
+  background: #e7f3fb;
+  border-color: #2d7aa7;
+  box-shadow: 0 8px 18px rgba(24, 92, 135, 0.16);
+}
+
 .pending-status-card-label {
   color: var(--soft-ink);
   font-size: 0.8rem;

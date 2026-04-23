@@ -44,7 +44,8 @@ const MESSAGE_DRAFT_STORAGE_KEY = 'adminMessagesDrafts';
 
 const pendingState = {
   allItems: [],
-  total: 0
+  total: 0,
+  activeStatusFilterKey: null
 };
 
 const PENDING_STATUS_CARDS = [
@@ -123,43 +124,48 @@ function countPendingStatusItems(items, matcher) {
   return items.filter((item) => matcher(item)).length;
 }
 
+function buildPendingStatusMatchers(total) {
+  return {
+    total: () => true,
+    pending: () => true,
+    victimIntimated: (item) =>
+      hasTrueFlag(item, ['victimIntimated', 'victimSummoned', 'victimNotified', 'victimNotifiedAt'])
+        || matchesStatusFlag(item, ['victimSummonsStatus', 'victimStatus'], ['sent', 'intimada', 'intimado']),
+    authorIntimated: (item) =>
+      hasTrueFlag(item, ['authorIntimated', 'authorSummoned', 'authorNotified', 'authorNotifiedAt'])
+        || matchesStatusFlag(item, ['authorSummonsStatus', 'authorStatus'], ['sent', 'intimada', 'intimado']),
+    witnessIntimated: (item) =>
+      hasTrueFlag(item, ['witnessIntimated', 'witnessSummoned', 'witnessNotified', 'witnessNotifiedAt'])
+        || matchesStatusFlag(item, ['witnessSummonsStatus', 'witnessStatus'], ['sent', 'intimada', 'intimado']),
+    victimHeard: (item) =>
+      hasTrueFlag(item, ['victimHeard', 'victimHeardAt'])
+        || matchesStatusFlag(item, ['victimAttendanceStatus', 'victimHearingStatus'], ['heard', 'ouvida', 'ouvido']),
+    authorHeard: (item) =>
+      hasTrueFlag(item, ['authorHeard', 'authorHeardAt'])
+        || matchesStatusFlag(item, ['authorAttendanceStatus', 'authorHearingStatus'], ['heard', 'ouvida', 'ouvido']),
+    witnessHeard: (item) =>
+      hasTrueFlag(item, ['witnessHeard', 'witnessHeardAt'])
+        || matchesStatusFlag(item, ['witnessAttendanceStatus', 'witnessHearingStatus'], ['heard', 'ouvida', 'ouvido']),
+    victimReported: (item) =>
+      hasTrueFlag(item, ['victimReported', 'victimReportedAt'])
+        || matchesStatusFlag(item, ['victimReportStatus'], ['reportada', 'reportado']),
+    victimReportedDuplicate: (item) =>
+      hasTrueFlag(item, ['victimReported', 'victimReportedAt'])
+        || matchesStatusFlag(item, ['victimReportStatus'], ['reportada', 'reportado'])
+  };
+}
+
 function buildPendingStatusCounts(items, total) {
   const safeItems = Array.isArray(items) ? items : [];
+  const matchers = buildPendingStatusMatchers(total);
 
-  const victimIntimated = countPendingStatusItems(safeItems, (item) =>
-    hasTrueFlag(item, ['victimIntimated', 'victimSummoned', 'victimNotified', 'victimNotifiedAt'])
-      || matchesStatusFlag(item, ['victimSummonsStatus', 'victimStatus'], ['sent', 'intimada', 'intimado'])
-  );
-
-  const authorIntimated = countPendingStatusItems(safeItems, (item) =>
-    hasTrueFlag(item, ['authorIntimated', 'authorSummoned', 'authorNotified', 'authorNotifiedAt'])
-      || matchesStatusFlag(item, ['authorSummonsStatus', 'authorStatus'], ['sent', 'intimada', 'intimado'])
-  );
-
-  const witnessIntimated = countPendingStatusItems(safeItems, (item) =>
-    hasTrueFlag(item, ['witnessIntimated', 'witnessSummoned', 'witnessNotified', 'witnessNotifiedAt'])
-      || matchesStatusFlag(item, ['witnessSummonsStatus', 'witnessStatus'], ['sent', 'intimada', 'intimado'])
-  );
-
-  const victimHeard = countPendingStatusItems(safeItems, (item) =>
-    hasTrueFlag(item, ['victimHeard', 'victimHeardAt'])
-      || matchesStatusFlag(item, ['victimAttendanceStatus', 'victimHearingStatus'], ['heard', 'ouvida', 'ouvido'])
-  );
-
-  const authorHeard = countPendingStatusItems(safeItems, (item) =>
-    hasTrueFlag(item, ['authorHeard', 'authorHeardAt'])
-      || matchesStatusFlag(item, ['authorAttendanceStatus', 'authorHearingStatus'], ['heard', 'ouvida', 'ouvido'])
-  );
-
-  const witnessHeard = countPendingStatusItems(safeItems, (item) =>
-    hasTrueFlag(item, ['witnessHeard', 'witnessHeardAt'])
-      || matchesStatusFlag(item, ['witnessAttendanceStatus', 'witnessHearingStatus'], ['heard', 'ouvida', 'ouvido'])
-  );
-
-  const victimReported = countPendingStatusItems(safeItems, (item) =>
-    hasTrueFlag(item, ['victimReported', 'victimReportedAt'])
-      || matchesStatusFlag(item, ['victimReportStatus'], ['reportada', 'reportado'])
-  );
+  const victimIntimated = countPendingStatusItems(safeItems, matchers.victimIntimated);
+  const authorIntimated = countPendingStatusItems(safeItems, matchers.authorIntimated);
+  const witnessIntimated = countPendingStatusItems(safeItems, matchers.witnessIntimated);
+  const victimHeard = countPendingStatusItems(safeItems, matchers.victimHeard);
+  const authorHeard = countPendingStatusItems(safeItems, matchers.authorHeard);
+  const witnessHeard = countPendingStatusItems(safeItems, matchers.witnessHeard);
+  const victimReported = countPendingStatusItems(safeItems, matchers.victimReported);
 
   return {
     total: Number.isFinite(total) ? total : safeItems.length,
@@ -186,12 +192,22 @@ function renderPendingStatusCards(counts) {
   );
 
   if (hasStaticCards) {
-    PENDING_STATUS_CARDS.forEach((card) => {
+    PENDING_STATUS_CARDS.forEach((card, index) => {
       const value = Number(counts && counts[card.key]);
       const safeValue = Number.isFinite(value) && value >= 0 ? value : 0;
       const valueElement = document.getElementById(`pendingCard-${card.key}`);
       if (valueElement) {
         valueElement.textContent = String(safeValue);
+        const cardElement = valueElement.closest('.pending-status-card');
+        if (cardElement) {
+          cardElement.dataset.cardKey = card.key;
+          cardElement.setAttribute('role', 'button');
+          cardElement.setAttribute('tabindex', '0');
+          cardElement.setAttribute('aria-pressed', pendingState.activeStatusFilterKey === card.key ? 'true' : 'false');
+          cardElement.classList.toggle('is-active', pendingState.activeStatusFilterKey === card.key);
+          cardElement.classList.toggle('is-clickable', true);
+          cardElement.dataset.cardIndex = String(index);
+        }
       }
     });
 
@@ -378,10 +394,31 @@ function renderPendingItems(items, total, query = '') {
 function applyPendingFilter() {
   const input = document.getElementById('pendingSearchInput');
   const query = input ? input.value : '';
-  const filteredItems = filterPendingItems(pendingState.allItems, query);
+  const queryFilteredItems = filterPendingItems(pendingState.allItems, query);
+  const matchers = buildPendingStatusMatchers(pendingState.total);
+  const activeMatcher = pendingState.activeStatusFilterKey
+    ? matchers[pendingState.activeStatusFilterKey]
+    : null;
+
+  const filteredItems = typeof activeMatcher === 'function'
+    ? queryFilteredItems.filter((item) => activeMatcher(item))
+    : queryFilteredItems;
 
   document.getElementById('pendingVisibleCount').textContent = String(filteredItems.length);
   renderPendingItems(filteredItems, pendingState.total, query);
+}
+
+function handleStatusCardClick(cardKey) {
+  if (!cardKey) {
+    return;
+  }
+
+  pendingState.activeStatusFilterKey = pendingState.activeStatusFilterKey === cardKey
+    ? null
+    : cardKey;
+
+  renderPendingStatusCards(buildPendingStatusCounts(pendingState.allItems, pendingState.total));
+  applyPendingFilter();
 }
 
 async function loadPendingCases() {
@@ -571,6 +608,29 @@ document.getElementById('refreshBtn').addEventListener('click', () => {
 
 document.getElementById('pendingSearchInput').addEventListener('input', () => {
   applyPendingFilter();
+});
+
+document.getElementById('pendingStatusCards').addEventListener('click', (event) => {
+  const card = event.target.closest('.pending-status-card');
+  if (!card || !card.dataset.cardKey) {
+    return;
+  }
+
+  handleStatusCardClick(card.dataset.cardKey);
+});
+
+document.getElementById('pendingStatusCards').addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' && event.key !== ' ') {
+    return;
+  }
+
+  const card = event.target.closest('.pending-status-card');
+  if (!card || !card.dataset.cardKey) {
+    return;
+  }
+
+  event.preventDefault();
+  handleStatusCardClick(card.dataset.cardKey);
 });
 
 document.getElementById('pendingList').addEventListener('change', (event) => {
