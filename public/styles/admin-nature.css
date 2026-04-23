@@ -25,7 +25,7 @@
 .nature-title {
   font-size: 1.05rem;
   line-height: 1.5;
-  color: #30182f;
+  color: var(--ink);
 }
 
 .nature-title-disabled {
@@ -38,7 +38,7 @@
   gap: 10px;
   cursor: pointer;
   user-select: none;
-  color: #7a5b76;
+  color: var(--soft-ink);
   font-weight: 600;
 }
 
@@ -52,7 +52,7 @@
   width: 22px;
   height: 22px;
   border-radius: 7px;
-  border: 2px solid rgba(151, 31, 93, 0.35);
+  border: 2px solid rgba(31, 59, 84, 0.35);
   background: #fff;
   display: inline-flex;
   align-items: center;
@@ -73,8 +73,8 @@
 }
 
 .nature-toggle input:checked + .nature-toggle-box {
-  background: #971f5d;
-  border-color: #971f5d;
+  background: var(--pink-700);
+  border-color: var(--pink-700);
 }
 
 .nature-toggle input:checked + .nature-toggle-box::after {
@@ -82,7 +82,7 @@
 }
 
 .nature-toggle input:focus-visible + .nature-toggle-box {
-  outline: 3px solid rgba(213, 53, 138, 0.25);
+  outline: 3px solid rgba(64, 169, 221, 0.25);
   outline-offset: 2px;
 }
 

@@ -7,8 +7,8 @@
   display: grid;
   gap: 16px;
   padding: 18px;
-  background: linear-gradient(180deg, #fff8fc 0%, #ffffff 100%);
-  box-shadow: 0 12px 30px rgba(123, 15, 69, 0.08);
+  background: linear-gradient(180deg, #f7fbfe 0%, #ffffff 100%);
+  box-shadow: 0 12px 30px rgba(34, 50, 67, 0.08);
 }
 
 .registration-card-header,
@@ -38,7 +38,7 @@
 
 .approve-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(191, 43, 113, 0.16);
+  box-shadow: 0 10px 24px rgba(32, 137, 201, 0.16);
 }
 
 .approve-btn:disabled {
@@ -52,7 +52,7 @@
   justify-content: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #ffeef8;
+  background: #edf7fc;
   border: 1px solid var(--line);
   color: var(--pink-900);
   font-size: 0.82rem;

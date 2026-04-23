@@ -28,7 +28,13 @@
         <label for="phone">Telefone</label>
         <input id="phone" placeholder="(00) 90000-0000" required />
 
-        <p class="status">Todos os novos cadastros sao enviados como agente e dependem de aprovacao do administrador.</p>
+        <label for="role">Perfil</label>
+        <select id="role" required>
+          <option value="agent">Agente</option>
+          <option value="plantonista">Plantonista</option>
+        </select>
+
+        <p class="status">Escolha o perfil desejado. Todo novo cadastro depende de aprovacao do administrador.</p>
 
         <button type="submit">Enviar solicitação</button>
       </form>

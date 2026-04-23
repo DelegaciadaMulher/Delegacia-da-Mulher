@@ -17,6 +17,28 @@ function valueOrDash(value) {
   return text || '-';
 }
 
+function formatRoleLabel(role) {
+  const normalizedRole = String(role || '').trim().toLowerCase();
+
+  if (normalizedRole === 'agent') {
+    return 'Agente';
+  }
+
+  if (normalizedRole === 'plantonista') {
+    return 'Plantonista';
+  }
+
+  if (normalizedRole === 'admin') {
+    return 'Administrador';
+  }
+
+  if (normalizedRole === 'manager') {
+    return 'Gestor';
+  }
+
+  return valueOrDash(role);
+}
+
 function normalizeDigits(value) {
   return String(value || '').replace(/\D/g, '');
 }
@@ -121,7 +143,7 @@ function renderUsers(items, query = '') {
             <div class="eyebrow">Usuario</div>
             <strong>${valueOrDash(item.fullName)}</strong>
           </div>
-          <span class="role-badge">${valueOrDash(item.role)}</span>
+          <span class="role-badge">${formatRoleLabel(item.role)}</span>
         </div>
 
         <div class="user-detail-grid">

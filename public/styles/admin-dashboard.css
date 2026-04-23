@@ -1,13 +1,13 @@
 :root {
-  --pink-900: #7b0f45;
-  --pink-700: #bf2b71;
-  --pink-500: #ef4d9e;
-  --pink-300: #f8abd3;
-  --pink-100: #ffe4f2;
+  --pink-900: #10283a;
+  --pink-700: #1a567d;
+  --pink-500: #2d7aa7;
+  --pink-300: #9fc4da;
+  --pink-100: #e6f0f6;
   --white: #fff;
-  --ink: #2e1531;
-  --soft-ink: #5f4765;
-  --line: #f3cce2;
+  --ink: #1d2d3c;
+  --soft-ink: #55687b;
+  --line: #ccdbe6;
 }
 
 * {
@@ -19,16 +19,12 @@ body {
   min-height: 100vh;
   font-family: 'Outfit', sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at 8% 10%, #ffd6ea 0%, #fff3fa 30%, #ffffff 70%);
+  background: linear-gradient(180deg, #e2ebf2 0%, #f3f7fa 36%, #ffffff 100%);
   overflow-x: hidden;
 }
 
 .bg-shape {
-  position: fixed;
-  z-index: -1;
-  border-radius: 50%;
-  filter: blur(3px);
-  opacity: 0.38;
+  display: none;
 }
 
 .bg-shape-1 {
@@ -125,34 +121,34 @@ h1 {
   border: none;
   background: linear-gradient(135deg, var(--pink-700), var(--pink-500));
   color: var(--white);
-  box-shadow: 0 12px 26px rgba(191, 43, 113, 0.18);
+  box-shadow: 0 12px 26px rgba(32, 137, 201, 0.18);
 }
 
 .icon-btn-primary:hover,
 .icon-btn-primary:focus-visible {
-  box-shadow: 0 14px 30px rgba(191, 43, 113, 0.24);
+  box-shadow: 0 14px 30px rgba(32, 137, 201, 0.24);
 }
 
 .icon-btn-secondary {
-  background: rgba(255, 248, 252, 0.96);
-  border-color: #ebb4d3;
+  background: rgba(247, 251, 254, 0.96);
+  border-color: #c6dbe9;
   color: var(--pink-900);
 }
 
 .icon-btn-secondary:hover,
 .icon-btn-secondary:focus-visible {
-  background: #ffeef8;
+  background: #edf7fc;
 }
 
 .icon-btn-danger {
-  background: rgba(123, 15, 69, 0.08);
-  border-color: rgba(123, 15, 69, 0.14);
+  background: rgba(31, 59, 84, 0.08);
+  border-color: rgba(31, 59, 84, 0.14);
   color: var(--pink-900);
 }
 
 .icon-btn-danger:hover,
 .icon-btn-danger:focus-visible {
-  background: rgba(123, 15, 69, 0.12);
+  background: rgba(31, 59, 84, 0.12);
 }
 
 .summary-strip {
@@ -161,10 +157,10 @@ h1 {
   z-index: 15;
   margin-bottom: 16px;
   padding: 8px 10px 10px;
-  border: 1px solid rgba(243, 204, 226, 0.85);
+  border: 1px solid rgba(213, 227, 238, 0.92);
   border-radius: 22px;
-  background: rgba(255, 247, 251, 0.96);
-  box-shadow: 0 14px 34px rgba(123, 15, 69, 0.08);
+  background: rgba(247, 251, 254, 0.96);
+  box-shadow: 0 14px 34px rgba(34, 50, 67, 0.08);
   isolation: isolate;
 }
 
@@ -184,8 +180,8 @@ h1 {
 }
 
 .dropzone {
-  border: 1.5px dashed #eba2ca;
-  background: linear-gradient(160deg, #fff8fc 0%, #fff 100%);
+  border: 1.5px dashed #9dc9e3;
+  background: linear-gradient(160deg, #f7fbfe 0%, #fff 100%);
   border-radius: 14px;
   min-height: 120px;
   display: grid;
@@ -199,13 +195,13 @@ h1 {
 .dropzone:hover {
   border-color: var(--pink-500);
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(191, 43, 113, 0.12);
+  box-shadow: 0 8px 20px rgba(32, 137, 201, 0.12);
 }
 
 .dropzone.drag-over {
   border-color: var(--pink-700);
-  background: linear-gradient(160deg, #ffeef8 0%, #fff 100%);
-  box-shadow: 0 10px 22px rgba(191, 43, 113, 0.16);
+  background: linear-gradient(160deg, #edf7fc 0%, #fff 100%);
+  box-shadow: 0 10px 22px rgba(32, 137, 201, 0.16);
 }
 
 .dropzone input[type='file'] {
@@ -260,8 +256,8 @@ h1 {
 }
 
 .ghost-btn {
-  border: 1px solid #ebb4d3;
-  background: #fff8fc;
+  border: 1px solid #c6dbe9;
+  background: #f7fbfe;
   color: var(--pink-900);
   border-radius: 999px;
   padding: 8px 12px;
@@ -270,7 +266,7 @@ h1 {
 }
 
 .ghost-btn:hover {
-  background: #ffeef8;
+  background: #edf7fc;
 }
 
 .coverage-chart {
@@ -281,7 +277,7 @@ h1 {
 .coverage-day {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fff8fc;
+  background: #f7fbfe;
   padding: 10px;
 }
 
@@ -297,22 +293,22 @@ h1 {
   height: 16px;
   border-radius: 999px;
   overflow: hidden;
-  border: 1px solid #f0bddb;
-  background: #fdeef7;
+  border: 1px solid #c6dbe9;
+  background: #edf7fc;
   display: flex;
 }
 
 .coverage-segment-covered {
-  background: linear-gradient(90deg, #be2b70, #ef4d9e);
+  background: linear-gradient(90deg, #2089c9, #40a9dd);
 }
 
 .coverage-segment-missing {
   background: repeating-linear-gradient(
     -45deg,
-    #ffe7f3,
-    #ffe7f3 6px,
-    #ffd1e8 6px,
-    #ffd1e8 12px
+    #eef7fc,
+    #eef7fc 6px,
+    #d8ecf7 6px,
+    #d8ecf7 12px
   );
 }
 
@@ -324,7 +320,7 @@ h1 {
 
 .history-panel {
   margin-top: 12px;
-  border-top: 1px dashed #edc3dc;
+  border-top: 1px dashed #c6dbe9;
   padding-top: 12px;
 }
 
@@ -342,7 +338,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px;
-  background: #fff8fc;
+  background: #f7fbfe;
 }
 
 .history-meta {
@@ -363,6 +359,7 @@ h1 {
   color: var(--pink-700);
   font-weight: 700;
   text-decoration: none;
+}
 
 .history-download-btn {
   display: inline-flex;
@@ -371,15 +368,14 @@ h1 {
   margin-left: 10px;
   padding: 7px 12px;
   border-radius: 999px;
-  border: 1px solid #ebb4d3;
+  border: 1px solid #c6dbe9;
   background: #fff;
-  box-shadow: 0 8px 18px rgba(123, 15, 69, 0.08);
+  box-shadow: 0 8px 18px rgba(34, 50, 67, 0.08);
 }
 
 .history-download-btn:hover {
   text-decoration: none;
-  background: #fff3fa;
-}
+  background: #edf7fc;
 }
 
 .history-link:hover {
@@ -395,7 +391,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 14px;
-  box-shadow: 0 8px 24px rgba(123, 15, 69, 0.08);
+  box-shadow: 0 10px 24px rgba(34, 50, 67, 0.08);
 }
 
 .card-loading {
@@ -420,8 +416,8 @@ h1 {
 .clickable-card:hover,
 .clickable-card:focus-visible {
   transform: translateY(-2px);
-  border-color: #eaa4cb;
-  box-shadow: 0 12px 28px rgba(123, 15, 69, 0.14);
+  border-color: #8bc0df;
+  box-shadow: 0 12px 28px rgba(34, 50, 67, 0.14);
   outline: none;
 }
 
@@ -438,7 +434,7 @@ h1 {
 }
 
 .card-loading .value {
-  color: #b46992;
+  color: #84a3ba;
 }
 
 .grid {
@@ -452,7 +448,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 14px;
-  box-shadow: 0 8px 24px rgba(123, 15, 69, 0.07);
+  box-shadow: 0 10px 24px rgba(34, 50, 67, 0.07);
 }
 
 .panel h2 {
@@ -470,7 +466,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 11px;
   padding: 10px;
-  background: #fff8fc;
+  background: #f7fbfe;
 }
 
 .item strong {
@@ -497,7 +493,7 @@ h1 {
 
 .approve-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(191, 43, 113, 0.16);
+  box-shadow: 0 10px 24px rgba(32, 137, 201, 0.16);
 }
 
 .approve-btn:disabled {

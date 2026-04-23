@@ -1,5 +1,5 @@
 -- Migração completa - Delegacia da Mulher
--- Gerado em: 2026-04-17T00:29:48.892Z
+-- Gerado em: 2026-04-23T14:13:46.153Z
 -- Execute este arquivo no seu banco PostgreSQL
 
 \c railway;
@@ -602,7 +602,34 @@ CREATE INDEX IF NOT EXISTS idx_appointments_case_id
 COMMIT;
 
 
+-- ===========================================
+-- Migração: 011_increase_code_length.sql
+-- ===========================================
 
+BEGIN;
+
+ALTER TABLE auth_codes
+  ALTER COLUMN code TYPE VARCHAR(32);
+
+ALTER TABLE appointments
+  ALTER COLUMN attendance_code TYPE VARCHAR(32);
+
+COMMIT;
+
+
+-- ===========================================
+-- Migração: 012_increase_auth_code_length_to_64.sql
+-- ===========================================
+
+BEGIN;
+
+ALTER TABLE auth_codes
+  ALTER COLUMN code TYPE VARCHAR(64);
+
+COMMIT;
+
+
+-- ===========================================
 -- Migração: 013_scheduling_gap_settings.sql
 -- ===========================================
 
@@ -623,8 +650,7 @@ ON CONFLICT (id) DO NOTHING;
 
 COMMIT;
 
-
-
+-- ===========================================
 -- Migração: 014_scheduling_author_summons_max_days.sql
 -- ===========================================
 
@@ -645,6 +671,46 @@ ADD CONSTRAINT scheduling_settings_author_summons_max_days_chk CHECK (author_sum
 
 COMMIT;
 
+-- ===========================================
+-- Migração: 015_users_role_plantonista.sql
+-- ===========================================
+
+BEGIN;
+
+ALTER TABLE users
+  DROP CONSTRAINT IF EXISTS users_role_chk;
+
+ALTER TABLE users
+  ADD CONSTRAINT users_role_chk
+  CHECK (role IN ('admin', 'manager', 'agent', 'plantonista'));
+
+COMMIT;
+
+-- ===========================================
+-- Migração: 016_expected_cases_extraction_order.sql
+-- ===========================================
+
+BEGIN;
+
+ALTER TABLE expected_cases
+  ADD COLUMN IF NOT EXISTS extraction_order INTEGER;
+
+WITH ranked_expected_cases AS (
+  SELECT
+    id,
+    ROW_NUMBER() OVER (
+      PARTITION BY daily_import_id
+      ORDER BY id ASC
+    ) AS extraction_order
+  FROM expected_cases
+)
+UPDATE expected_cases ec
+SET extraction_order = ranked_expected_cases.extraction_order
+FROM ranked_expected_cases
+WHERE ec.id = ranked_expected_cases.id
+  AND (ec.extraction_order IS NULL OR ec.extraction_order <= 0);
+
+COMMIT;
 
 
 -- ===========================================

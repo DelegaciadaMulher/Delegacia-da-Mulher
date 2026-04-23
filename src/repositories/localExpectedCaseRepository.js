@@ -43,9 +43,20 @@ async function readStore() {
   }
 
   const parsed = JSON.parse(raw);
+  const expectedCases = ensureExpectedCasesExtractionOrder(
+    Array.isArray(parsed.expectedCases) ? parsed.expectedCases : []
+  );
+
+  if (JSON.stringify(Array.isArray(parsed.expectedCases) ? parsed.expectedCases : []) !== JSON.stringify(expectedCases)) {
+    await writeStore({
+      lastExpectedCaseId: Number(parsed.lastExpectedCaseId) || 0,
+      expectedCases
+    });
+  }
+
   return {
     lastExpectedCaseId: Number(parsed.lastExpectedCaseId) || 0,
-    expectedCases: Array.isArray(parsed.expectedCases) ? parsed.expectedCases : []
+    expectedCases
   };
 }
 
@@ -71,6 +82,7 @@ function normalizeExpectedCaseRecord(expectedCase) {
   return {
     id: Number(expectedCase.id),
     dailyImportId: Number(expectedCase.dailyImportId) || 0,
+    extractionOrder: Number(expectedCase.extractionOrder) || 0,
     status: String(expectedCase.status || 'PENDENTE').trim().toUpperCase(),
     boNumber: normalizeBoNumber(expectedCase.boNumber),
     flagrante: expectedCase.flagrante == null ? null : String(expectedCase.flagrante).trim(),
@@ -109,14 +121,84 @@ function toPendingExpectedCaseItem(expectedCase) {
     authorPhone: expectedCase.authorPhone,
     local: expectedCase.local,
     status: expectedCase.status,
+    extractionOrder: expectedCase.extractionOrder,
     createdAt: expectedCase.createdAt
   };
+}
+
+function toTimestamp(value) {
+  const dateValue = new Date(value || 0).getTime();
+  return Number.isFinite(dateValue) ? dateValue : 0;
+}
+
+function buildExpectedCaseImportKey(expectedCase) {
+  return [
+    Number(expectedCase.dailyImportId) || 0,
+    expectedCase.periodStart || '',
+    expectedCase.periodEnd || '',
+    expectedCase.sourceName || ''
+  ].join('|');
+}
+
+function ensureExpectedCasesExtractionOrder(expectedCases) {
+  const items = Array.isArray(expectedCases)
+    ? expectedCases.map((item) => normalizeExpectedCaseRecord(item))
+    : [];
+
+  const groups = new Map();
+  for (const item of items) {
+    const key = buildExpectedCaseImportKey(item);
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+
+    groups.get(key).push(item);
+  }
+
+  const normalizedById = new Map();
+  for (const groupItems of groups.values()) {
+    groupItems
+      .sort((left, right) => Number(left.id) - Number(right.id))
+      .forEach((item, index) => {
+        normalizedById.set(Number(item.id), {
+          ...item,
+          extractionOrder: index + 1
+        });
+      });
+  }
+
+  return items.map((item) => normalizedById.get(Number(item.id)) || item);
 }
 
 function sortByNewest(left, right) {
   const leftDate = new Date(left.updatedAt || left.createdAt || 0).getTime();
   const rightDate = new Date(right.updatedAt || right.createdAt || 0).getTime();
   return rightDate - leftDate;
+}
+
+function sortByPendingBookOrder(left, right) {
+  const leftImportId = Number(left.dailyImportId) || 0;
+  const rightImportId = Number(right.dailyImportId) || 0;
+
+  if (leftImportId !== rightImportId) {
+    return rightImportId - leftImportId;
+  }
+
+  const leftImportMoment = Math.max(toTimestamp(left.periodStart), toTimestamp(left.createdAt));
+  const rightImportMoment = Math.max(toTimestamp(right.periodStart), toTimestamp(right.createdAt));
+
+  if (leftImportMoment !== rightImportMoment) {
+    return rightImportMoment - leftImportMoment;
+  }
+
+  const leftOrder = Number(left.extractionOrder) || Number(left.id) || 0;
+  const rightOrder = Number(right.extractionOrder) || Number(right.id) || 0;
+
+  if (leftOrder !== rightOrder) {
+    return leftOrder - rightOrder;
+  }
+
+  return Number(left.id) - Number(right.id);
 }
 
 function toImportHistoryItem(item) {
@@ -138,7 +220,7 @@ async function createPendingExpectedCases({ sourceName, periodStart, periodEnd, 
   const createdOrUpdated = [];
   const processedBoNumbers = new Set();
 
-  for (const boEntry of Array.isArray(boEntries) ? boEntries : []) {
+  for (const [index, boEntry] of Array.from(Array.isArray(boEntries) ? boEntries : []).entries()) {
     const boNumber = normalizeBoNumber(boEntry && boEntry.boNumber);
     if (!boNumber || processedBoNumbers.has(boNumber)) {
       continue;
@@ -169,6 +251,7 @@ async function createPendingExpectedCases({ sourceName, periodStart, periodEnd, 
           savedPath: pickExistingOrIncoming(existingExpectedCase.savedPath, boEntry.savedPath),
           periodStart: pickExistingOrIncoming(existingExpectedCase.periodStart, periodStart),
           periodEnd: pickExistingOrIncoming(existingExpectedCase.periodEnd, periodEnd),
+          extractionOrder: index + 1,
           createdAt: existingExpectedCase.createdAt || now,
           updatedAt: now
         })
@@ -198,6 +281,7 @@ async function createPendingExpectedCases({ sourceName, periodStart, periodEnd, 
       savedPath: boEntry.savedPath,
       periodStart,
       periodEnd,
+      extractionOrder: index + 1,
       createdAt: now,
       updatedAt: now
     });
@@ -209,7 +293,7 @@ async function createPendingExpectedCases({ sourceName, periodStart, periodEnd, 
 
   await writeStore(store);
 
-  return createdOrUpdated.sort(sortByNewest);
+  return createdOrUpdated.sort(sortByPendingBookOrder);
 }
 
 async function listPendingExpectedCases() {
@@ -217,7 +301,7 @@ async function listPendingExpectedCases() {
   const items = store.expectedCases
     .map(normalizeExpectedCaseRecord)
     .filter((expectedCase) => expectedCase.status === 'PENDENTE' && expectedCase.boNumber)
-    .sort(sortByNewest)
+    .sort(sortByPendingBookOrder)
     .map(toPendingExpectedCaseItem);
 
   return {

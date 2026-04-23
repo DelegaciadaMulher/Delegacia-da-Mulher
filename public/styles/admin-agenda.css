@@ -12,12 +12,12 @@
 .gap-rule-shell {
   margin-bottom: 18px;
   padding-bottom: 18px;
-  border-bottom: 1px solid #f3d8e7;
+  border-bottom: 1px solid #d7e5ef;
 }
 
 .gap-rule-shell h2 {
   margin: 0 0 6px;
-  color: #7b0f45;
+  color: var(--pink-900);
   font-family: 'Space Grotesk', sans-serif;
   font-size: 1.08rem;
 }
@@ -37,7 +37,7 @@
 }
 
 .gap-rule-field span {
-  color: #7b0f45;
+  color: var(--pink-900);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -46,19 +46,19 @@
 
 .gap-rule-field input {
   width: 100%;
-  border: 1px solid #f3cce2;
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 14px;
   font: inherit;
-  color: #2e1531;
+  color: var(--ink);
   background: #fff;
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .gap-rule-field input:focus {
   outline: none;
-  border-color: rgba(191, 43, 113, 0.48);
-  box-shadow: 0 0 0 4px rgba(239, 77, 158, 0.12);
+  border-color: rgba(32, 137, 201, 0.48);
+  box-shadow: 0 0 0 4px rgba(64, 169, 221, 0.14);
 }
 
 .gap-rule-submit-btn:disabled {
@@ -78,7 +78,7 @@
 
 .availability-heading h2 {
   margin: 0 0 6px;
-  color: #7b0f45;
+  color: var(--pink-900);
   font-family: 'Space Grotesk', sans-serif;
   font-size: 1.08rem;
 }
@@ -104,7 +104,7 @@
 }
 
 .availability-field span {
-  color: #7b0f45;
+  color: var(--pink-900);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -113,19 +113,19 @@
 
 .availability-field input {
   width: 100%;
-  border: 1px solid #f3cce2;
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 14px;
   font: inherit;
-  color: #2e1531;
+  color: var(--ink);
   background: #fff;
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .availability-field input:focus {
   outline: none;
-  border-color: rgba(191, 43, 113, 0.48);
-  box-shadow: 0 0 0 4px rgba(239, 77, 158, 0.12);
+  border-color: rgba(32, 137, 201, 0.48);
+  box-shadow: 0 0 0 4px rgba(64, 169, 221, 0.14);
 }
 
 .availability-submit-btn {
@@ -147,7 +147,7 @@
   gap: 8px;
   padding: 14px 16px;
   background: #fff;
-  box-shadow: 0 8px 20px rgba(123, 15, 69, 0.05);
+  box-shadow: 0 8px 20px rgba(34, 50, 67, 0.05);
 }
 
 .availability-card-header {
@@ -166,9 +166,9 @@
 
 .agenda-calendar-shell,
 .agenda-day-shell {
-  border: 1px solid #f3cce2;
+  border: 1px solid var(--line);
   border-radius: 16px;
-  background: linear-gradient(180deg, #fffafd 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #f8fbfe 0%, #ffffff 100%);
   padding: 16px;
 }
 
@@ -187,7 +187,7 @@
 .agenda-month-copy strong {
   display: block;
   margin-top: 4px;
-  color: #7b0f45;
+  color: var(--pink-900);
   font-family: 'Space Grotesk', sans-serif;
   font-size: 1.12rem;
   text-transform: capitalize;
@@ -196,10 +196,10 @@
 .month-nav-btn {
   width: 42px;
   height: 42px;
-  border: 1px solid #ebb4d3;
+  border: 1px solid #c6dbe9;
   border-radius: 12px;
   background: #fff;
-  color: #7b0f45;
+  color: var(--pink-900);
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
@@ -210,8 +210,8 @@
 .month-nav-btn:focus-visible {
   outline: none;
   transform: translateY(-1px);
-  border-color: #e58ab9;
-  box-shadow: 0 10px 22px rgba(123, 15, 69, 0.1);
+  border-color: #72b8df;
+  box-shadow: 0 10px 22px rgba(34, 50, 67, 0.1);
 }
 
 .agenda-weekdays,
@@ -227,7 +227,7 @@
 
 .agenda-weekdays span {
   text-align: center;
-  color: #7b0f45;
+  color: var(--pink-900);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -241,11 +241,11 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  border: 1px solid #f3d8e7;
+  border: 1px solid #d7e5ef;
   border-radius: 14px;
   background: #fff;
   padding: 10px;
-  color: #2e1531;
+  color: var(--ink);
   cursor: pointer;
   transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease;
 }
@@ -254,29 +254,29 @@
 .agenda-day-cell:focus-visible {
   outline: none;
   transform: translateY(-1px);
-  border-color: #e58ab9;
-  box-shadow: 0 10px 22px rgba(123, 15, 69, 0.08);
+  border-color: #72b8df;
+  box-shadow: 0 10px 22px rgba(34, 50, 67, 0.08);
 }
 
 .agenda-day-cell-outside {
-  background: #fff8fc;
-  color: #9d7f99;
+  background: #f7fbfe;
+  color: #8ea2b5;
 }
 
 .agenda-day-cell-has-items {
-  background: linear-gradient(180deg, #fff8fc 0%, #fff 100%);
-  border-color: #e8b0cf;
+  background: linear-gradient(180deg, #f7fbfe 0%, #fff 100%);
+  border-color: #c6dbe9;
 }
 
 .agenda-day-cell-selected {
-  background: linear-gradient(180deg, #7b0f45 0%, #9f185f 100%);
-  border-color: #7b0f45;
+  background: linear-gradient(180deg, #1f3b54 0%, #2089c9 100%);
+  border-color: #1f3b54;
   color: #fff;
-  box-shadow: 0 14px 28px rgba(123, 15, 69, 0.2);
+  box-shadow: 0 14px 28px rgba(31, 59, 84, 0.2);
 }
 
 .agenda-day-cell-today {
-  border-color: #bf2b71;
+  border-color: var(--pink-700);
 }
 
 .agenda-day-number {
@@ -301,7 +301,7 @@
 .agenda-day-header strong {
   display: block;
   margin-top: 4px;
-  color: #7b0f45;
+  color: var(--pink-900);
   font-family: 'Space Grotesk', sans-serif;
   font-size: 1.02rem;
 }
@@ -312,8 +312,8 @@
   justify-content: center;
   padding: 8px 12px;
   border-radius: 999px;
-  background: #fff4fa;
-  color: #7b0f45;
+  background: #edf7fc;
+  color: var(--pink-900);
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -327,7 +327,7 @@
   gap: 12px;
   padding: 16px;
   background: #fff;
-  box-shadow: 0 8px 22px rgba(123, 15, 69, 0.05);
+  box-shadow: 0 8px 22px rgba(34, 50, 67, 0.05);
 }
 
 .agenda-card-header {
@@ -349,8 +349,8 @@
 }
 
 .status-chip-scheduled {
-  background: rgba(191, 43, 113, 0.12);
-  color: #7b0f45;
+  background: rgba(32, 137, 201, 0.12);
+  color: var(--pink-900);
 }
 
 .status-chip-confirmed {
@@ -375,14 +375,14 @@
   justify-content: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #fff4fa;
-  color: #7b0f45;
+  background: #edf7fc;
+  color: var(--pink-900);
   font-size: 0.82rem;
   font-weight: 700;
 }
 
 .agenda-meta {
-  color: #5f4765;
+  color: var(--soft-ink);
   line-height: 1.45;
 }
 

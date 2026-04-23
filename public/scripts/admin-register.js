@@ -17,6 +17,11 @@ function formatCpf(value) {
     .slice(0, 14);
 }
 
+function normalizeRegistrationRole(value) {
+  const role = String(value || '').trim().toLowerCase();
+  return role === 'plantonista' ? 'plantonista' : 'agent';
+}
+
 const registerForm = document.getElementById('registerForm');
 const cpfInput = document.getElementById('cpf');
 const submitButton = registerForm.querySelector('button[type="submit"]');
@@ -36,7 +41,7 @@ registerForm.addEventListener('submit', async (event) => {
     cpf: normalizeCpf(document.getElementById('cpf').value),
     email: String(document.getElementById('email').value || '').trim(),
     phone: String(document.getElementById('phone').value || '').trim(),
-    role: 'agent'
+    role: normalizeRegistrationRole(document.getElementById('role').value)
   };
 
   try {

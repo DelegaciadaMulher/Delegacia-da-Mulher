@@ -166,11 +166,12 @@ async function processPdfUpload(file) {
     }
 
     expectedCases = await Promise.all(
-      boEntries.map((entry) =>
+      boEntries.map((entry, index) =>
         expectedCaseRepository.createExpectedCaseFromBo({
           dailyImportId: createdImport.id,
           periodStart: period.start,
-          boBook: entry
+          boBook: entry,
+          extractionOrder: index + 1
         })
       )
     );

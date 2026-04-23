@@ -83,7 +83,7 @@ async function getPendingExpectedCases() {
       created_at AS "createdAt"
     FROM expected_cases
     WHERE status = 'PENDENTE'
-    ORDER BY created_at DESC
+    ORDER BY daily_import_id DESC, COALESCE(extraction_order, id) ASC, id ASC
   `;
 
   const { rows } = await pool.query(query);

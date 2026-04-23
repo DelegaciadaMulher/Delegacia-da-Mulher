@@ -18,6 +18,10 @@ function normalizeChannel(channel) {
   return String(channel || '').trim().toLowerCase();
 }
 
+function normalizeRegistrationRole(role) {
+  return String(role || '').trim().toLowerCase();
+}
+
 function generateOtpCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -284,7 +288,7 @@ async function register(payload) {
   const fullName = String(payload.fullName || '').trim();
   const email = String(payload.email || '').trim();
   const phone = String(payload.phone || '').trim();
-  const role = 'agent';
+  const role = normalizeRegistrationRole(payload.role);
 
   if (!fullName) {
     const error = new Error('Nome completo e obrigatorio.');
@@ -306,6 +310,12 @@ async function register(payload) {
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     const error = new Error('Email invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (role !== 'agent' && role !== 'plantonista') {
+    const error = new Error('Perfil invalido. Escolha Agente ou Plantonista.');
     error.statusCode = 400;
     throw error;
   }

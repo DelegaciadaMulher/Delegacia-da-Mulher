@@ -188,7 +188,7 @@ async function createPendingRegistration({ fullName, cpf, email, phone, role }) 
     email,
     phone,
     cpf,
-    role: 'agent',
+    role: role || 'agent',
     isActive: false,
     createdAt,
     updatedAt: createdAt

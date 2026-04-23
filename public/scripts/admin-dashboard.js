@@ -29,6 +29,28 @@ function safeCount(value) {
   return Number.isFinite(numericValue) ? numericValue : 0;
 }
 
+function formatRoleLabel(role) {
+  const normalizedRole = String(role || '').trim().toLowerCase();
+
+  if (normalizedRole === 'agent') {
+    return 'Agente';
+  }
+
+  if (normalizedRole === 'plantonista') {
+    return 'Plantonista';
+  }
+
+  if (normalizedRole === 'admin') {
+    return 'Administrador';
+  }
+
+  if (normalizedRole === 'manager') {
+    return 'Gestor';
+  }
+
+  return role ? String(role).trim() : 'nao informado';
+}
+
 function readDashboardSummaryCache() {
   try {
     const raw = localStorage.getItem('adminDashboardSummary');
@@ -392,7 +414,7 @@ async function loadRegistrationRequests() {
     <div class="item registration-request-item" data-user-id="${item.id}">
       <strong>${item.fullName}</strong>
       <div>${item.email || 'sem email'}</div>
-      <div>${item.role ? `Perfil: ${item.role}` : 'Perfil: nao informado'}</div>
+      <div>Perfil: ${formatRoleLabel(item.role)}</div>
       <div class="muted">CPF: ${item.cpf || '-'} | ${item.phone || 'sem telefone'}</div>
       <div class="registration-request-actions">
         <button type="button" class="approve-btn" data-user-id="${item.id}">Aprovar</button>
