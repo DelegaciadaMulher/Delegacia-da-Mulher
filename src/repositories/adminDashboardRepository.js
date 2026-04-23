@@ -1,5 +1,20 @@
 const pool = require('../config/database');
 
+async function hasExpectedCasesExtractionOrderColumn() {
+  const query = `
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_name = 'expected_cases'
+        AND column_name = 'extraction_order'
+        AND table_schema = ANY (current_schemas(FALSE))
+    ) AS "hasExtractionOrder"
+  `;
+
+  const { rows } = await pool.query(query);
+  return Boolean(rows[0] && rows[0].hasExtractionOrder);
+}
+
 async function getCasesOfDay() {
   const query = `
     SELECT
@@ -72,6 +87,11 @@ async function approveUserRegistration(userId) {
 }
 
 async function getPendingExpectedCases() {
+  const hasExtractionOrder = await hasExpectedCasesExtractionOrderColumn();
+  const orderByClause = hasExtractionOrder
+    ? 'daily_import_id DESC, COALESCE(extraction_order, id) ASC, id ASC'
+    : 'daily_import_id DESC, id ASC';
+
   const query = `
     SELECT
       id,
@@ -83,7 +103,7 @@ async function getPendingExpectedCases() {
       created_at AS "createdAt"
     FROM expected_cases
     WHERE status = 'PENDENTE'
-    ORDER BY daily_import_id DESC, COALESCE(extraction_order, id) ASC, id ASC
+    ORDER BY ${orderByClause}
   `;
 
   const { rows } = await pool.query(query);
