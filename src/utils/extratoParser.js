@@ -32,7 +32,7 @@ function normalizeBoNumber(value) {
 
 function extractBoNumber(text) {
   const match = text.match(
-    /(?:numero\s+do\s+bo|n[ºo°]\s*do\s*bo|n[ºo°]\s*bo|bo(?:letim)?\s*(?:de\s+ocorrencia|de\s+ocorrência)?|rdo)\s*[:\-]?\s*([A-Za-z0-9./\-]{4,40})/i
+    /(?:numero\s+do\s+bo|n[ºo°]\s*do\s*bo|n[ºo°]\s*bo|bo(?:letim)?(?:\s*n[ºo°])?\s*(?:de\s+ocorrencia|de\s+ocorrência)?|rdo)\s*[:\-]?\s*([A-Za-z0-9./\-]*\d[A-Za-z0-9./\-]{0,39})/i
   );
 
   return normalizeBoNumber(match ? match[1] : null);

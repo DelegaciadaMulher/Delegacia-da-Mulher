@@ -48,10 +48,6 @@ function resolveTargetBoNumber(boData, extratoData) {
   const normalizedBoFromBo = normalizeComparableBoNumber(boNumberFromBo);
   const normalizedBoFromExtrato = normalizeComparableBoNumber(boNumberFromExtrato);
 
-  console.log('[pairImportService] BO comparison:');
-  console.log('  boNumberFromBo:', boNumberFromBo, '-> normalized:', normalizedBoFromBo);
-  console.log('  boNumberFromExtrato:', boNumberFromExtrato, '-> normalized:', normalizedBoFromExtrato);
-
   if (normalizedBoFromBo && normalizedBoFromExtrato && normalizedBoFromBo !== normalizedBoFromExtrato) {
     const error = new Error('BO e Extrato possuem numeros de BO diferentes.');
     error.statusCode = 409;
@@ -177,11 +173,7 @@ async function importBoAndExtratoPair(files, payload) {
 
   const boData = parseBoBookContent(boText);
   const extratoData = parseExtratoContent(extratoText);
-  
-  console.log('[pairImportService] Parsed data:');
-  console.log('  boData.boNumber:', boData.boNumber);
-  console.log('  extratoData.boNumber:', extratoData.boNumber);
-  
+
   const boNumber = resolveTargetBoNumber(boData, extratoData);
 
   if (env.auth.devMode) {

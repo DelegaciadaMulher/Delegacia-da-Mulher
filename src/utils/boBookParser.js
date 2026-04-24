@@ -66,7 +66,7 @@ function extractBoNumbersFromRawLines(rawText, seen, output) {
 }
 
 function extractBoNumbers(text, rawText) {
-  const regexByLabel = /(?:numero\s+do\s+bo|n[ºo°]\s*do\s*bo|n[ºo°]\s*bo|bo(?:letim)?\s*(?:de\s+ocorrencia|de\s+ocorrência)?|rdo)\s*[:\-]?\s*([A-Za-z0-9./\-]{4,40})/gi;
+  const regexByLabel = /(?:numero\s+do\s+bo|n[ºo°]\s*do\s*bo|n[ºo°]\s*bo|bo(?:letim)?(?:\s*n[ºo°])?\s*(?:de\s+ocorrencia|de\s+ocorrência)?|rdo)\s*[:\-]?\s*([A-Za-z0-9./\-]{4,40})/gi;
   const regexCodeAndYear = /\b([A-Z]{1,3}\d{3,6}\s*[-:]\s*\d{1,4}\/\d{4})(?=\D|$)/gi;
   const regexByLineFormat = /(?<!\d\/)\b\d{1,5}[\/\-]\d{4}\b(?!\/\d)/g;
   const regexNearBoKeyword = /(?:\bbo\b|\brdo\b)[^\n\r\d]{0,12}(\d{1,6}[\/\-]\d{4,6}|\d{4,6}[\/\-]\d{1,6})/gi;
@@ -335,7 +335,7 @@ function parseBoBookContent(rawText) {
   const boNumber = normalizeBoNumber(
     extractByRegex(
       text,
-      /(?:numero\s+do\s+bo|n[ºo°]\s*do\s*bo|n[ºo°]\s*bo|bo(?:letim)?\s*(?:de\s+ocorrencia|de\s+ocorrência)?|rdo)\s*[:\-]?\s*([A-Za-z0-9./\-]{4,40})/i
+      /(?:numero\s+do\s+bo|n[ºo°]\s*do\s*bo|n[ºo°]\s*bo|bo(?:letim)?(?:\s*n[ºo°])?\s*(?:de\s+ocorrencia|de\s+ocorrência)?|rdo)\s*[:\-]?\s*([A-Za-z0-9./\-]*\d[A-Za-z0-9./\-]{0,39})/i
     )
   );
 
