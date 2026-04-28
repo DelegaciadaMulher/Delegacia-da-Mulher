@@ -222,14 +222,15 @@ function renderPendingStatusCards(counts) {
   }
 
   container.innerHTML = PENDING_STATUS_CARDS
-    .map((card) => {
+    .map((card, index) => {
       const value = Number(counts && counts[card.key]);
       const safeValue = Number.isFinite(value) && value >= 0 ? value : 0;
+      const isActive = pendingState.activeStatusFilterKey === card.key;
 
       return `
-        <article class="pending-status-card">
+        <article class="pending-status-card is-clickable${isActive ? ' is-active' : ''}" data-card-key="${escapeHtml(card.key)}" data-card-index="${index}" role="button" tabindex="0" aria-pressed="${isActive ? 'true' : 'false'}">
           <span class="pending-status-card-label">${escapeHtml(card.label)}</span>
-          <strong class="pending-status-card-value">${safeValue}</strong>
+          <strong class="pending-status-card-value" id="pendingCard-${escapeHtml(card.key)}">${safeValue}</strong>
         </article>
       `;
     })
