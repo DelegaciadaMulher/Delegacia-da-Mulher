@@ -37,6 +37,7 @@ function validatePeriodContinuity(period, lastImport) {
 
   const currentStartMs = period.start.getTime();
   const lastEndMs = new Date(lastImport.periodEnd).getTime();
+  const expectedNextStartMs = lastEndMs + (60 * 1000);
 
   if (Number.isNaN(currentStartMs) || Number.isNaN(lastEndMs)) {
     const error = new Error('Nao foi possivel validar o periodo com o ultimo importado.');
@@ -44,17 +45,17 @@ function validatePeriodContinuity(period, lastImport) {
     throw error;
   }
 
-  if (currentStartMs < lastEndMs) {
+  if (currentStartMs < expectedNextStartMs) {
     const error = new Error(
-      `Duplicidade detectada: o novo periodo inicia antes do fim do ultimo importado (${new Date(lastImport.periodEnd).toISOString()}).`
+      `Duplicidade detectada: o novo periodo inicia antes do esperado (${new Date(expectedNextStartMs).toISOString()}) com base no ultimo importado (${new Date(lastImport.periodEnd).toISOString()}).`
     );
     error.statusCode = 409;
     throw error;
   }
 
-  if (currentStartMs > lastEndMs) {
+  if (currentStartMs > expectedNextStartMs) {
     const error = new Error(
-      `Lacuna detectada: o novo periodo inicia apos o fim do ultimo importado (${new Date(lastImport.periodEnd).toISOString()}).`
+      `Lacuna detectada: o novo periodo inicia apos o esperado (${new Date(expectedNextStartMs).toISOString()}) com base no ultimo importado (${new Date(lastImport.periodEnd).toISOString()}).`
     );
     error.statusCode = 409;
     throw error;
