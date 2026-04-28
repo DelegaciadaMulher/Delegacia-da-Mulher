@@ -43,13 +43,15 @@ function normalizeSearchText(value) {
 const MESSAGE_DRAFT_STORAGE_KEY = 'adminMessagesDrafts';
 
 const pendingState = {
-  allItems: [],
+  pendingItems: [],
+  processingItems: [],
   total: 0,
   activeStatusFilterKey: null
 };
 
 const PENDING_STATUS_CARDS = [
   { key: 'pending', label: 'Pendentes' },
+  { key: 'processing', label: 'Processando' },
   { key: 'victimIntimated', label: 'Vitima intimada' },
   { key: 'authorIntimated', label: 'Infrator intimado' },
   { key: 'witnessIntimated', label: 'Testemunha intimadas' },
@@ -128,6 +130,7 @@ function buildPendingStatusMatchers(total) {
   return {
     total: () => true,
     pending: () => true,
+    processing: () => true,
     victimIntimated: (item) =>
       hasTrueFlag(item, ['victimIntimated', 'victimSummoned', 'victimNotified', 'victimNotifiedAt'])
         || matchesStatusFlag(item, ['victimSummonsStatus', 'victimStatus'], ['sent', 'intimada', 'intimado']),
@@ -155,21 +158,25 @@ function buildPendingStatusMatchers(total) {
   };
 }
 
-function buildPendingStatusCounts(items, total) {
-  const safeItems = Array.isArray(items) ? items : [];
+function buildPendingStatusCounts(pendingItems, processingItems, total) {
+  const safePendingItems = Array.isArray(pendingItems) ? pendingItems : [];
+  const safeProcessingItems = Array.isArray(processingItems) ? processingItems : [];
   const matchers = buildPendingStatusMatchers(total);
 
-  const victimIntimated = countPendingStatusItems(safeItems, matchers.victimIntimated);
-  const authorIntimated = countPendingStatusItems(safeItems, matchers.authorIntimated);
-  const witnessIntimated = countPendingStatusItems(safeItems, matchers.witnessIntimated);
-  const victimHeard = countPendingStatusItems(safeItems, matchers.victimHeard);
-  const authorHeard = countPendingStatusItems(safeItems, matchers.authorHeard);
-  const witnessHeard = countPendingStatusItems(safeItems, matchers.witnessHeard);
-  const victimReported = countPendingStatusItems(safeItems, matchers.victimReported);
+  const pending = safePendingItems.length;
+  const processing = safeProcessingItems.length;
+  const victimIntimated = countPendingStatusItems(safePendingItems, matchers.victimIntimated);
+  const authorIntimated = countPendingStatusItems(safePendingItems, matchers.authorIntimated);
+  const witnessIntimated = countPendingStatusItems(safePendingItems, matchers.witnessIntimated);
+  const victimHeard = countPendingStatusItems(safePendingItems, matchers.victimHeard);
+  const authorHeard = countPendingStatusItems(safePendingItems, matchers.authorHeard);
+  const witnessHeard = countPendingStatusItems(safePendingItems, matchers.witnessHeard);
+  const victimReported = countPendingStatusItems(safePendingItems, matchers.victimReported);
 
   return {
-    total: Number.isFinite(total) ? total : safeItems.length,
-    pending: Number.isFinite(total) ? total : safeItems.length,
+    total: Number.isFinite(total) ? total : safePendingItems.length + safeProcessingItems.length,
+    pending,
+    processing,
     victimIntimated,
     authorIntimated,
     witnessIntimated,
@@ -248,7 +255,10 @@ function readWhatsappImageUrl() {
 }
 
 function findPendingItemById(expectedCaseId) {
-  return pendingState.allItems.find((item) => Number(item && item.id) === Number(expectedCaseId)) || null;
+  const inPending = pendingState.pendingItems.find((item) => Number(item && item.id) === Number(expectedCaseId));
+  if (inPending) return inPending;
+  
+  return pendingState.processingItems.find((item) => Number(item && item.id) === Number(expectedCaseId)) || null;
 }
 
 function filterPendingItems(items, query) {
@@ -394,9 +404,15 @@ function renderPendingItems(items, total, query = '') {
 function applyPendingFilter() {
   const input = document.getElementById('pendingSearchInput');
   const query = input ? input.value : '';
-  const queryFilteredItems = filterPendingItems(pendingState.allItems, query);
+  
+  let allItems = pendingState.pendingItems;
+  if (pendingState.activeStatusFilterKey === 'processing') {
+    allItems = pendingState.processingItems;
+  }
+  
+  const queryFilteredItems = filterPendingItems(allItems, query);
   const matchers = buildPendingStatusMatchers(pendingState.total);
-  const activeMatcher = pendingState.activeStatusFilterKey
+  const activeMatcher = pendingState.activeStatusFilterKey && pendingState.activeStatusFilterKey !== 'processing'
     ? matchers[pendingState.activeStatusFilterKey]
     : null;
 
@@ -417,7 +433,7 @@ function handleStatusCardClick(cardKey) {
     ? null
     : cardKey;
 
-  renderPendingStatusCards(buildPendingStatusCounts(pendingState.allItems, pendingState.total));
+  renderPendingStatusCards(buildPendingStatusCounts(pendingState.pendingItems, pendingState.processingItems, pendingState.total));
   applyPendingFilter();
 }
 
@@ -428,38 +444,59 @@ async function loadPendingCases() {
     return;
   }
 
-  const response = await fetch('/api/admin/dashboard/pending-cases', {
-    headers: {
-      Authorization: `Bearer ${token}`
+  try {
+    const pendingResponse = await fetch('/api/admin/dashboard/pending-cases', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (pendingResponse.status === 401 || pendingResponse.status === 403) {
+      localStorage.removeItem('adminAccessToken');
+      window.location.href = '/admin';
+      return;
     }
-  });
 
-  if (response.status === 401 || response.status === 403) {
-    localStorage.removeItem('adminAccessToken');
-    window.location.href = '/admin';
-    return;
+    if (!pendingResponse.ok) {
+      throw new Error('Falha ao carregar BOs pendentes.');
+    }
+
+    const processingResponse = await fetch('/api/admin/dashboard/processing-cases', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    let pendingItems = [];
+    let processingItems = [];
+    let total = 0;
+
+    const pendingData = await pendingResponse.json();
+    pendingItems = Array.isArray(pendingData && pendingData.items) ? pendingData.items : [];
+
+    if (processingResponse.ok) {
+      const processingData = await processingResponse.json();
+      processingItems = Array.isArray(processingData && processingData.items) ? processingData.items : [];
+    }
+
+    total = pendingItems.length + processingItems.length;
+
+    if (pendingData && pendingData.mocked && !pendingItems.length) {
+      const devBos = readDevPendingBos();
+      pendingItems = devBos;
+      total = readDevPendingCases() || pendingItems.length;
+    }
+
+    pendingState.pendingItems = pendingItems;
+    pendingState.processingItems = processingItems;
+    pendingState.total = total;
+    document.getElementById('pendingCount').textContent = String(total);
+    renderPendingStatusCards(buildPendingStatusCounts(pendingItems, processingItems, total));
+    applyPendingFilter();
+  } catch (error) {
+    console.error('Erro ao carregar casos:', error);
+    throw error;
   }
-
-  if (!response.ok) {
-    throw new Error('Falha ao carregar BOs pendentes.');
-  }
-
-  const data = await response.json();
-  let items = Array.isArray(data && data.items) ? data.items : [];
-  const responseTotal = Number(data && data.total);
-  let total = Number.isFinite(responseTotal) ? responseTotal : items.length;
-
-  if (data && data.mocked && !items.length && !Number.isFinite(responseTotal)) {
-    const devBos = readDevPendingBos();
-    items = devBos;
-    total = readDevPendingCases() || items.length;
-  }
-
-  pendingState.allItems = items;
-  pendingState.total = total;
-  document.getElementById('pendingCount').textContent = String(total);
-  renderPendingStatusCards(buildPendingStatusCounts(items, total));
-  applyPendingFilter();
 }
 
 async function submitPairUpload(form) {

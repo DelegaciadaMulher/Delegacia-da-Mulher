@@ -19,6 +19,15 @@ async function getPendingCases(req, res, next) {
   }
 }
 
+async function getProcessingCases(req, res, next) {
+  try {
+    const result = await adminDashboardService.getProcessingCasesList();
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function indictPendingCase(req, res, next) {
   try {
     const expectedCaseId = Number(req.params.expectedCaseId);
@@ -188,6 +197,7 @@ async function approveRegistrationRequest(req, res, next) {
 module.exports = {
   getOverview,
   getPendingCases,
+  getProcessingCases,
   indictPendingCase,
   getAgendaCalendar,
   getAgendaAvailability,

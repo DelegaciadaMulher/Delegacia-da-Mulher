@@ -327,6 +327,25 @@ async function countPendingExpectedCases() {
   return result.total;
 }
 
+async function listProcessingExpectedCases() {
+  const store = await readStore();
+  const items = store.expectedCases
+    .map(normalizeExpectedCaseRecord)
+    .filter((expectedCase) => expectedCase.status === 'PROCESSANDO' && expectedCase.boNumber)
+    .sort(sortByPendingBookOrder)
+    .map(toPendingExpectedCaseItem);
+
+  return {
+    total: items.length,
+    items
+  };
+}
+
+async function countProcessingExpectedCases() {
+  const result = await listProcessingExpectedCases();
+  return result.total;
+}
+
 async function listInvolvedPeopleSource() {
   const store = await readStore();
   const items = store.expectedCases
@@ -530,6 +549,8 @@ module.exports = {
   createPendingExpectedCases,
   listPendingExpectedCases,
   countPendingExpectedCases,
+  listProcessingExpectedCases,
+  countProcessingExpectedCases,
   listImportHistory,
   listInvolvedPeopleSource,
   findPendingExpectedCaseByBoNumber,

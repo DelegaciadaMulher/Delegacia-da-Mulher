@@ -755,6 +755,34 @@ async function getPendingCasesList() {
   }
 }
 
+async function getProcessingCasesList() {
+  if (shouldUseLocalSimulation()) {
+    const result = await localExpectedCaseRepository.listProcessingExpectedCases();
+
+    return {
+      mocked: true,
+      total: result.total,
+      items: result.items
+    };
+  }
+
+  try {
+    return await dashboardRepository.getProcessingExpectedCases?.();
+  } catch (error) {
+    if (!env.auth.devMode) {
+      throw error;
+    }
+
+    const result = await localExpectedCaseRepository.listProcessingExpectedCases();
+
+    return {
+      mocked: true,
+      total: result.total,
+      items: result.items
+    };
+  }
+}
+
 async function findPendingCaseForIndictment(expectedCaseId) {
   if (shouldUseLocalSimulation()) {
     return localExpectedCaseRepository.findPendingExpectedCaseById(expectedCaseId);
@@ -999,6 +1027,7 @@ async function getImportHistory() {
 module.exports = {
   getDashboardOverview,
   getPendingCasesList,
+  getProcessingCasesList,
   indictPendingCase,
   getAgendaCalendar,
   getInvolvedPeopleList,

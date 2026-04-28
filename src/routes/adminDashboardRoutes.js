@@ -17,6 +17,7 @@ router.get('/users', adminDashboardController.getUsers);
 router.get('/notifications', adminDashboardController.getNotifications);
 router.delete('/users/:userId', adminDashboardController.deleteUser);
 router.get('/pending-cases', adminDashboardController.getPendingCases);
+router.get('/processing-cases', adminDashboardController.getProcessingCases);
 router.post('/pending-cases/:expectedCaseId/indict', adminDashboardController.indictPendingCase);
 router.get('/pending-registrations', adminDashboardController.getPendingRegistrationRequests);
 router.post('/pending-registrations/:userId/approve', adminDashboardController.approveRegistrationRequest);
